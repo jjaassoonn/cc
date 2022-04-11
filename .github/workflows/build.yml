@@ -32,7 +32,7 @@ jobs:
           access_token: ${{ github.token }}
 
   build:
-    name: Build flt-regular
+    name: Build this
     runs-on: ubuntu-latest
     env:
       # number of commits to check for olean cache
@@ -75,8 +75,8 @@ jobs:
         id: build
         run: |
           echo "::set-output name=started::true"
-          lean --json --make src | python scripts/detect_errors.py
-          lean --json --make src | python scripts/detect_errors.py
+          lean --json --make src
+          lean --json --make src
 
       - name: push release to azure
         if: always() && (github.repository == 'leanprover-community/flt-regular') && steps.build.outputs.started == 'true' && github.ref == 'refs/heads/master'
@@ -125,7 +125,7 @@ jobs:
 
       - name: lint
         # Uncomment the following line to make the build succeed even if there are linting errors
-        # continue-on-error: true
+        continue-on-error: true
         run: |
           ./scripts/mk_all.sh
           lean --run scripts/lint_project.lean
