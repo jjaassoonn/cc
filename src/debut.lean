@@ -177,8 +177,21 @@ def d_pos {n : ℕ} (hn : 0 < n) : C 𝓕 𝔘 n.pred ⟶ C 𝓕 𝔘 n :=
   map_zero' := d_pos.map_zero' _ _ _,
   map_add' := d_pos.map_add' _ _ _ }
 
+lemma d_pos.def {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) (σ : simplex 𝔘 n) :
+  d_pos hn f σ = 
+  ∑ i in (range n.succ).attach, 
+    if (even i.1)
+    then 𝓕.map (der 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩).op (f (σ.ignore hn ⟨i.1, mem_range.mp i.2⟩))
+    else - 𝓕.map (der 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩).op (f (σ.ignore hn ⟨i.1, mem_range.mp i.2⟩)) := 
+begin
+  sorry
+end
+
+#exit
 lemma dd {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) : d_pos (nat.zero_lt_succ _ : 0 < n.succ) (d_pos hn f) = 0 :=
-sorry
+begin
+  sorry
+end
 
 end
 
