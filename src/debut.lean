@@ -45,8 +45,7 @@ def ignore (σ : simplex 𝔘 n) (m : fin n.succ) : simplex 𝔘 n.pred :=
 { to_finset := σ.1.erase $ sort' σ.1 ⟨m.1, σ.2.symm ▸ m.2⟩,
   card_eq := (nat.succ_pred_eq_of_pos hn).symm ▸ by simp }
 
-def ignore₂
-  (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) : simplex 𝔘 n.pred :=
+def ignore₂ (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) : simplex 𝔘 n.pred :=
 (σ.ignore (nat.zero_lt_succ _) m).ignore hn m'
 
 lemma ignore_subset (σ : simplex 𝔘 n) (m : fin n.succ) :
@@ -55,6 +54,30 @@ begin
   change x ∈ finset.erase _ _ at hx,
   rw finset.mem_erase at hx,
   exact hx.2,
+end
+
+lemma ignore₂_subset (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) :
+  (σ.ignore₂ hn m m').to_finset ⊆ σ.to_finset :=
+subset.trans ((σ.ignore (nat.zero_lt_succ _) m).ignore_subset hn m') $ σ.ignore_subset _ _
+
+lemma ignore₂_to_finset (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) :
+  (σ.ignore₂ hn m m').to_finset =
+  σ.to_finset \ ({sort' σ.to_finset ⟨m.1, σ.2.symm ▸ m.2⟩, sort' σ.to_finset ⟨m'.1, lt_trans m'.2 (σ.2.symm ▸ lt_add_one (nat.succ n))⟩} : finset ι) :=
+begin
+  -- unfold ignore₂ ignore,
+  -- dsimp,
+  -- ext i,
+  -- split,
+  -- { intros hi,
+  --   rw [mem_erase, mem_erase] at hi,
+  --   rcases hi with ⟨h1, h2, h3⟩,
+  --   rw mem_sdiff,
+  --   refine ⟨h3, λ r, _⟩,
+  --   rw mem_insert at r,
+  --   cases r,
+  --   sorry },
+  -- { sorry }
+  sorry
 end
 
 end simplex
