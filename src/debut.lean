@@ -67,20 +67,28 @@ lemma ignore₂_to_finset_case1 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ)
   { sort' σ.to_finset ⟨m.1, σ.2.symm ▸ m.2⟩, 
     sort' σ.to_finset ⟨m'.1, lt_trans m'.2 (σ.2.symm ▸ lt_add_one (nat.succ n))⟩ } :=
 begin
-  -- unfold ignore₂ ignore,
-  -- dsimp,
-  -- ext i,
-  -- split,
-  -- { intros hi,
-  --   rw [mem_erase, mem_erase] at hi,
-  --   rcases hi with ⟨h1, h2, h3⟩,
-  --   rw mem_sdiff,
-  --   refine ⟨h3, λ r, _⟩,
-  --   rw mem_insert at r,
-  --   cases r,
-  --   sorry },
-  -- { sorry }
-  sorry
+  unfold ignore₂ ignore,
+  dsimp,
+  ext i,
+  split,
+  { intros hi,
+    rw [mem_erase, mem_erase] at hi,
+    rcases hi with ⟨h1, h2, h3⟩,
+    rw mem_sdiff,
+    refine ⟨h3, λ r, _⟩,
+    rw [mem_insert, mem_singleton] at r,
+    cases r,
+    { exact h2 r },
+    { apply h1, 
+      rw [r],
+      have := sort'_injective σ.to_finset,
+      sorry } },
+  { intros hi, 
+    rw [mem_sdiff, mem_insert, mem_singleton, not_or_distrib] at hi,
+    rw [mem_erase, mem_erase],
+    refine ⟨_, ⟨hi.2.1, hi.1⟩⟩,
+    sorry }
+  -- sorry
 end
 
 lemma ignore₂_to_finset_case2 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
