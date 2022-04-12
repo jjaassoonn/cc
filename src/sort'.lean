@@ -7,7 +7,23 @@ variables {ι : Type*} [linear_order ι] [is_well_order ι ((≤) : ι → ι �
 
 namespace finset
 
-def erase_order_emb_of_fin (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) :
+def erase_nth (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) : finset ι :=
+s.erase (s.order_emb_of_fin h m)
+
+lemma erase_nth_card (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) :
+  (s.erase_nth h m).card = k.pred :=
+begin
+  unfold erase_nth,
+  rw finset.card_erase_eq_ite,
+  split_ifs with h2,
+  { rw h,
+    exact nat.pred_eq_sub_one _, },
+  { exfalso,
+    apply h2,
+    apply finset.order_emb_of_fin_mem },
+end
+
+def erase_order_emb_of_fin' (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) :
   fin k.pred ↪o ι :=
 { to_fun := λ n, 
     if (n.1 < m.1) 
@@ -74,14 +90,41 @@ def erase_order_emb_of_fin (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k
         rwa nat.succ_le_succ_iff } }
   end }
 
-example (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) : true :=
+lemma erase_order_emb_of_fin'_mem (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) (x : fin k.pred) :
+  s.erase_order_emb_of_fin' h m x ∈ s.erase_nth h m := 
 begin
-  have := @finset.order_emb_of_fin_unique _ _ (s.erase (s.order_emb_of_fin h m)) k.pred _
-    (s.erase_order_emb_of_fin h m) _ _,
-  
-  trivial;
-  sorry,
+  unfold erase_order_emb_of_fin',
+  simp only [rel_embedding.coe_fn_mk, function.embedding.coe_fn_mk],
+  unfold erase_nth,
+  split_ifs with h2,
+  { rw mem_erase,
+    refine ⟨λ r, _, order_emb_of_fin_mem s h _⟩,
+    replace r := (s.order_emb_of_fin h).inj' r,
+    rw subtype.ext_iff_val at r,
+    linarith, },
+  { rw mem_erase,
+    refine ⟨λ r, _, order_emb_of_fin_mem s h _⟩,
+    replace r := (s.order_emb_of_fin h).inj' r,
+    rw subtype.ext_iff_val at r,
+    rw ← r at h2,
+    change ¬ x.1 < x.1.succ at h2,
+    apply h2,
+    exact lt_add_one _, },
 end
+
+theorem erase_order_emb_of_fin'_eq (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) :
+  (s.erase_nth h m).order_emb_of_fin (s.erase_nth_card h m) = 
+  s.erase_order_emb_of_fin' h m := 
+begin
+  symmetry,
+  have := finset.order_emb_of_fin_unique (s.erase_nth_card h m) begin
+    intros x,
+    apply erase_order_emb_of_fin'_mem,
+  end (order_embedding.strict_mono (s.erase_order_emb_of_fin' h m)),
+  ext x,
+  rw this,
+end
+
 -- def sort' (σ : finset ι) : fin σ.card → ι := 
 -- λ n, (finset.sort ((≤) : ι → ι → Prop) σ).nth_le n.1 $ (finset.length_sort (≤) : _ = σ.card).symm ▸ n.2
 -- -- { val := (finset.sort ((≤) : ι → ι → Prop) σ).nth_le n.1 $ (finset.length_sort (≤) : _ = σ.card).symm ▸ n.2,
