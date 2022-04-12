@@ -19,4 +19,6 @@ list.sorted.rel_nth_le_of_lt (finset.sort_sorted_lt σ) _ _ h
 lemma sort'_injective (σ : finset ι) : function.injective (sort' σ) :=
 strict_mono.injective $ sort'_strict_mono _
 
+noncomputable lemma sort'_erase (σ : finset ι) : sorry := sorry
+
 end examples
