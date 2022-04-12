@@ -60,9 +60,12 @@ lemma ignore₂_subset (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fi
   (σ.ignore₂ hn m m').to_finset ⊆ σ.to_finset :=
 subset.trans ((σ.ignore (nat.zero_lt_succ _) m).ignore_subset hn m') $ σ.ignore_subset _ _
 
-lemma ignore₂_to_finset (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) :
+lemma ignore₂_to_finset_case1 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
+  (hmm' : m'.1 < m.1) :
   (σ.ignore₂ hn m m').to_finset =
-  σ.to_finset \ ({sort' σ.to_finset ⟨m.1, σ.2.symm ▸ m.2⟩, sort' σ.to_finset ⟨m'.1, lt_trans m'.2 (σ.2.symm ▸ lt_add_one (nat.succ n))⟩} : finset ι) :=
+  σ.to_finset \ 
+  { sort' σ.to_finset ⟨m.1, σ.2.symm ▸ m.2⟩, 
+    sort' σ.to_finset ⟨m'.1, lt_trans m'.2 (σ.2.symm ▸ lt_add_one (nat.succ n))⟩ } :=
 begin
   -- unfold ignore₂ ignore,
   -- dsimp,
@@ -77,6 +80,30 @@ begin
   --   cases r,
   --   sorry },
   -- { sorry }
+  sorry
+end
+
+lemma ignore₂_to_finset_case2 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
+  (hmm' : m'.1 = m.1) :
+  (σ.ignore₂ hn m m').to_finset =
+  σ.to_finset \ 
+  { sort' σ.to_finset ⟨m.1, σ.2.symm ▸ m.2⟩, 
+    sort' σ.to_finset ⟨m.1.succ, hmm' ▸ σ.2.symm ▸ nat.succ_lt_succ m'.property⟩ }:=
+begin
+  sorry
+end
+
+lemma ignore₂_to_finset_case3 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
+  (hmm' : m.1 < m'.1) :
+  (σ.ignore₂ hn m m').to_finset =
+  σ.to_finset \ 
+  { sort' σ.to_finset ⟨m.1, σ.2.symm ▸ m.2⟩, 
+    sort' σ.to_finset ⟨m'.1.pred, begin
+      refine lt_trans (nat.pred_lt_pred (λ r, nat.not_lt_zero m.1 (r ▸ hmm')) m'.2) _,
+      { rw [σ.2],
+        exact lt_trans (lt_add_one n : n < n.succ) (lt_add_one _) } 
+    end⟩ } :=
+begin
   sorry
 end
 
