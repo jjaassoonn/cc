@@ -1,6 +1,7 @@
 import topology.category.Top
 import topology.sheaves.sheaf
-import sort'
+import sort
+import for_mathlib.lemmas
 import data.nat.parity
 import algebra.category.Group.limits
 import tactic
