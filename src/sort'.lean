@@ -3,12 +3,20 @@ import tactic.linarith
 
 section examples
 
-variables {ι : Type*} [linear_order ι] [is_well_order ι ((≤) : ι → ι → Prop)]
+variables {ι : Type*} [linear_order ι] -- [is_well_order ι ((≤) : ι → ι → Prop)]
 
 namespace finset
 
 def erase_nth (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) : finset ι :=
 s.erase (s.order_emb_of_fin h m)
+
+lemma mem_erase_nth (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) (i : ι) :
+  i ∈ s.erase_nth h m ↔ i ≠ s.order_emb_of_fin h m ∧ i ∈ s :=
+begin
+  unfold erase_nth,
+  rw mem_erase,
+end
+
 
 lemma erase_nth_card (s : finset ι) {k : ℕ} (h : s.card = k) (m : fin k) :
   (s.erase_nth h m).card = k.pred :=
