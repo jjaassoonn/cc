@@ -133,62 +133,6 @@ begin
   rw this,
 end
 
--- def sort' (σ : finset ι) : fin σ.card → ι := 
--- λ n, (finset.sort ((≤) : ι → ι → Prop) σ).nth_le n.1 $ (finset.length_sort (≤) : _ = σ.card).symm ▸ n.2
--- -- { val := (finset.sort ((≤) : ι → ι → Prop) σ).nth_le n.1 $ (finset.length_sort (≤) : _ = σ.card).symm ▸ n.2,
--- --   property := (finset.mem_sort (≤)).mp $ list.nth_le_mem _ _ _ }
-
--- lemma sort'_mem (σ : finset ι) (m : fin σ.card) :
---   (σ.sort' m) ∈ σ := 
--- (finset.mem_sort (≤)).mp $ list.nth_le_mem _ _ _
-
--- lemma sort'_monotone (σ : finset ι) : monotone (sort' σ) := λ x y h, 
--- list.sorted.rel_nth_le_of_le (finset.sort_sorted ((≤) : ι → ι → Prop) σ) 
---     (by { rw finset.length_sort, exact x.2 } : x.val < (finset.sort (≤) σ).length) 
---     (by { rw finset.length_sort, exact y.2 } : y.val < (finset.sort (≤) σ).length) h
-
--- lemma sort'_strict_mono (σ : finset ι) : strict_mono (sort' σ) := λ x y h, 
--- list.sorted.rel_nth_le_of_lt (finset.sort_sorted_lt σ) _ _ h
-
--- lemma sort'_injective (σ : finset ι) : function.injective (sort' σ) :=
--- strict_mono.injective $ sort'_strict_mono _
-
--- def erase_nth (σ : finset ι) (m : fin σ.card) : finset ι :=
--- σ.erase (sort' σ m)
-
--- lemma erase_nth_card (σ : finset ι) (m : fin σ.card) :
---   (σ.erase_nth m).card = σ.card.pred :=
--- begin
---   haveI : decidable_eq ι := classical.dec_eq _,
---   unfold erase_nth,
---   convert @finset.card_erase_eq_ite _ σ (σ.sort' m) _,
---   rw if_pos (σ.sort'_mem m),
---   exact nat.pred_eq_sub_one _,
--- end
-
--- lemma sort'_erase_case1.aux0 (σ : finset ι) (h0 : σ.card = 0) (m1 : fin σ.card) (m2 : fin σ.card.pred)
---   (h : m1.1 < m2.1) :
---   ((σ.erase_nth m1).sort' ⟨m2.1, (σ.erase_nth_card m1).symm ▸ m2.2⟩ : ι) = 
---   (σ.sort' ⟨m2.1.pred, false.elim $ by rw h0 at m1; exact fin_zero_elim m1⟩) := 
--- false.elim $ by rw h0 at m1; exact fin_zero_elim m1
-
--- lemma sort'_erase_case1.aux1 (σ : finset ι) (h0 : σ.card = 1) (m1 : fin σ.card) (m2 : fin σ.card.pred) 
---   (h : m1.1 < m2.1) : 
---   ((σ.erase_nth m1).sort' ⟨m2.1, (σ.erase_nth_card m1).symm ▸ m2.2⟩ : ι) = 
---   (σ.sort' ⟨m2.1.pred, false.elim $ by rw h0 at m2; exact fin_zero_elim m2⟩) :=
--- false.elim $ by rw h0 at m2; exact fin_zero_elim m2
-
--- lemma sort'_erease_case2.aux2 (σ : finset ι) (h0 : 2 ≤ σ.card) (m1 : fin σ.card) (m2 : fin σ.card.pred) 
---   (h : m1.1 < m2.1) : 
---   ((σ.erase_nth m1).sort' ⟨m2.1, (σ.erase_nth_card m1).symm ▸ m2.2⟩ : ι) = 
---   (σ.sort' ⟨m2.1.pred, lt_trans (nat.pred_lt_pred (λ r, nat.not_lt_zero m1.1 (r ▸ h)) 
---     (lt_of_lt_of_le m2.2 $ le_refl _) : m2.1.pred < σ.card.pred.pred) 
---     (lt_of_le_of_lt (nat.pred_le _ : σ.card.pred.pred ≤ σ.card.pred) (nat.pred_lt $ λ r, by rw r at m1; exact fin_zero_elim m1))⟩) := 
--- begin
---   unfold sort' erase_nth,
---   sorry
--- end
-
 end finset
 
 end examples
