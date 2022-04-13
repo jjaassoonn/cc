@@ -18,11 +18,11 @@ variable (X : Top)
 structure oc :=
 (ι : Type*)
 [lo : linear_order ι] 
-[wo : is_well_order ι ((≤) : ι → ι → Prop)]
+-- [wo : is_well_order ι ((≤) : ι → ι → Prop)]
 (cover : ι → opens X)
 (is_cover : supr cover = ⊤)
 
-attribute [instance] oc.lo oc.wo
+attribute [instance] oc.lo -- oc.wo
 attribute [simp] oc.is_cover
 
 variable {X}
