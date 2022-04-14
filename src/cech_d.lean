@@ -1,9 +1,10 @@
-import topology.category.Top
 import topology.sheaves.sheaf
 import sort
+import oc
 import for_mathlib.lemmas
 import data.nat.parity
 import algebra.category.Group.limits
+import algebra.category.Group.abelian
 import tactic
 
 section
@@ -14,16 +15,6 @@ open opposite
 open_locale big_operators
 
 variable (X : Top) 
-
-structure oc :=
-(ι : Type*)
-[lo : linear_order ι] 
--- [wo : is_well_order ι ((≤) : ι → ι → Prop)]
-(cover : ι → opens X)
-(is_cover : supr cover = ⊤)
-
-attribute [instance] oc.lo -- oc.wo
-attribute [simp] oc.is_cover
 
 variable {X}
 variable (𝓕 : sheaf Ab X)
@@ -40,11 +31,45 @@ attribute [simp] simplex.card_eq
 
 namespace simplex
 
-variables {𝔘} {n : ℕ} (hn : 0 < n)
+variables {𝔘}
+
+def nth {n : ℕ} (σ : simplex 𝔘 n) (m : fin n.succ) : ι :=
+σ.to_finset.order_emb_of_fin σ.2 m
+
+instance {n : ℕ} : has_mem ι (simplex 𝔘 n) :=
+{ mem := λ i σ, i ∈ σ.to_finset }
+
+lemma nth_mem {n : ℕ} (σ : simplex 𝔘 n) (m : fin n.succ) :
+  σ.nth m ∈ σ :=
+σ.to_finset.order_emb_of_fin_mem σ.card_eq m
+
+def zero_from (i : ι) : simplex 𝔘 0 :=
+{ to_finset := {i},
+  card_eq := rfl }
+
+variables {n : ℕ} (hn : 0 < n)
 
 def ignore (σ : simplex 𝔘 n) (m : fin n.succ) : simplex 𝔘 n.pred :=
 { to_finset := σ.1.erase_nth σ.2 m,
   card_eq := (nat.succ_pred_eq_of_pos hn).symm ▸ σ.1.erase_nth_card _ m }
+
+lemma mem_ignore (σ : simplex 𝔘 n) (m : fin n.succ) (i : ι) :
+  i ∈ σ.ignore hn m ↔ i ∈ σ ∧ i ≠ σ.nth m :=
+begin
+  split,
+  { intros hi,
+    change i ∈ simplex.to_finset _ at hi,
+    unfold ignore at hi,
+    dsimp only at hi,
+    rw mem_erase_nth at hi,
+    refine ⟨hi.2, hi.1⟩, },
+  { intros hi,
+    change i ∈ simplex.to_finset _,
+    unfold ignore,
+    dsimp only,
+    rw mem_erase_nth,
+    refine ⟨hi.2, hi.1⟩, },
+end 
 
 def ignore₂ (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) : simplex 𝔘 n.pred :=
 (σ.ignore (nat.zero_lt_succ _) m).ignore hn m'
@@ -141,7 +166,59 @@ by rw [simplex.ext_iff, ignore₂_eq_ignore₂.aux]
 end simplex
 
 def face {n : ℕ} (σ : simplex 𝔘 n) : opens X :=
-infi (λ i : σ.to_finset, 𝔘.cover i.1)
+⨅ (i : ι) (H : i ∈ σ.to_finset), 𝔘.cover i
+
+lemma face0 (σ : simplex 𝔘 0) :
+  face 𝔘 σ = 𝔘.cover (σ.nth 0) := 
+begin
+  unfold face,
+  have eq1 : σ.to_finset = {σ.nth 0},
+  { rcases card_eq_one.mp σ.2 with ⟨a, eq1⟩,
+    have := σ.nth_mem 0,
+    change _ ∈ σ.to_finset at this,
+    rw eq1 at *,
+    rw mem_singleton at this,
+    rw this },
+  rw [eq1, finset.infi_singleton],
+end
+
+lemma face1 (σ : simplex 𝔘 1) :
+  face 𝔘 σ = 𝔘.cover (σ.nth 0) ⊓ 𝔘.cover (σ.nth ⟨1, one_lt_two⟩) :=
+begin
+  rcases card_eq_two.mp σ.2 with ⟨a, b, ineq, eq1⟩,
+  have mem1 : (_ ∈ σ.to_finset) := σ.nth_mem 0,
+  have mem2 : (_ ∈ σ.to_finset) := σ.nth_mem ⟨1, one_lt_two⟩,
+  have ineq2 : σ.nth 0 ≠ σ.nth ⟨1, one_lt_two⟩,
+  { intro rid,
+    unfold simplex.nth at rid,
+    replace rid := (σ.to_finset.order_emb_of_fin σ.2).inj' rid,
+    rw subtype.ext_iff_val at rid,
+    change 0 = 1 at rid,
+    linarith, },
+  rw [eq1, mem_insert, mem_singleton] at mem1 mem2,
+  unfold face,
+  rw [eq1, finset.infi_insert, finset.infi_singleton],
+  cases mem1;
+  cases mem2;
+  rw [mem1, mem2] at *;
+  tauto <|> exact inf_comm,
+end
+
+def subset₀ {n : ℕ} (σ : simplex 𝔘 n) (m : fin n.succ) :
+  face 𝔘 σ ⟶ face 𝔘 (simplex.zero_from 𝔘 (σ.nth m)) := hom_of_le $ λ p hp, 
+begin
+  rw [opens.mem_coe] at hp ⊢,
+  rw face0,
+  change _ ∈ (infi _) at hp,
+  have := (infi_le _ : ∀ _, face 𝔘 σ ≤ _),
+  specialize this ((simplex.zero_from 𝔘 (σ.nth m)).nth 0),
+  simp only [le_infi_iff] at this,
+  refine this _ hp,
+  have : _ ∈ {_} := (simplex.zero_from 𝔘 (σ.nth m)).nth_mem 0,
+  rw mem_singleton at this,
+  rw this,
+  apply simplex.nth_mem,
+end
 
 def der {n : ℕ} (hn : 0 < n) (σ : simplex 𝔘 n) (m : fin n.succ) :
   face 𝔘 σ ⟶ face 𝔘 (σ.ignore hn m) := hom_of_le $ λ p hp, 
@@ -152,19 +229,23 @@ begin
   specialize hS x_mem,
   simp only [subtype.val_eq_coe, set.Inf_eq_sInter, set.sInter_image, set.mem_range, 
     set.Inter_exists, set.Inter_Inter_eq', set.mem_Inter, opens.mem_coe] at hS ⊢,
-  exact λ i, hS ⟨i.1, σ.ignore_subset hn m i.2⟩,
+  intros i,
+  specialize hS i,
+  rcases hS with ⟨w, ⟨hw1, hw2⟩, hx⟩,
+  refine ⟨w, ⟨hw1, _⟩, hx⟩,
+  intros y hy,
+  specialize hw2 hy,
+  simp only [subtype.val_eq_coe, set.Inf_eq_sInter, set.sInter_image, set.mem_range, exists_prop, 
+    set.mem_Inter, opens.mem_coe, and_imp, forall_apply_eq_imp_iff'] at hw2 ⊢,
+  intros hi2,
+  apply hw2,
+  apply simplex.ignore_subset,
+  exact hi2,
 end
 
 def dder {n : ℕ} (hn : 0 < n) (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) :
   face 𝔘 σ ⟶ face 𝔘 (σ.ignore₂ hn m m') :=
 der 𝔘 (nat.zero_lt_succ _) σ m ≫ der 𝔘 _ (σ.ignore _ m) m'
-
-lemma dder_eq  {n : ℕ} (hn : 0 < n) (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
-  (hmm' : m.1 ≤ m'.1) :
-  dder 𝔘 hn σ m m' ≫ eq_to_hom (congr_arg _ (simplex.ignore₂_eq_ignore₂ hn σ m m' hmm')) = dder 𝔘 hn σ ⟨m'.1.succ, nat.succ_lt_succ m'.2⟩ ⟨m.1, by linarith [m'.2]⟩ :=
-begin
-  refl,
-end
 
 namespace C
 
@@ -230,7 +311,6 @@ variable {X}
 def C (n : ℕ) : Ab :=
 ⟨C.carrier 𝓕 𝔘 n⟩
 
-
 lemma C.finset_sum_apply (n : ℕ) {α : Type*} [decidable_eq α] 
   (f : α → C 𝓕 𝔘 n) (s : finset α) (σ : simplex 𝔘 n) :
   (∑ i in s, f i) σ = ∑ i in s, f i σ :=
@@ -238,7 +318,25 @@ begin
   induction s using finset.induction_on with a s ha ih,
   { simp, },
   { rw [finset.sum_insert ha, finset.sum_insert ha, pi.add_apply, ih] },
-end 
+end
+
+section d0
+
+variables {𝓕 𝔘}
+def d0 : C 𝓕 𝔘 0 ⟶ C 𝓕 𝔘 1 :=
+{ to_fun := λ f σ, 
+    𝓕.map (subset₀ 𝔘 σ 0).op (f (simplex.zero_from 𝔘 (σ.nth 0))) - 
+    𝓕.map (subset₀ 𝔘 σ 1).op (f (simplex.zero_from 𝔘 (σ.nth 1))),
+  map_zero' := funext $ λ σ , begin
+    rw [C.zero_apply, C.zero_apply, map_zero, map_zero, sub_zero, C.zero_apply],
+  end,
+  map_add' := λ x y, funext $ λ σ, begin
+    rw [C.add_apply, map_add, C.add_apply, map_add, C.add_apply],
+    dsimp only,
+    abel,
+  end }
+
+end d0
 
 namespace d_pos
 
@@ -360,8 +458,13 @@ begin
   apply congr_arg,
   apply sum_congr rfl (λ m' hm', _),
   by_cases e' : even m'.1,
-  { rw [if_pos e', id, if_pos e', id] },
-  { rw [if_neg e', if_neg e', map_neg] },
+  { conv_rhs { rw [if_pos e', id] },
+    congr' 1,
+    rw [if_pos e', id],
+   },
+  { conv_rhs { rw [if_neg e', ← map_neg] },
+    congr' 1,
+    rw [if_neg e'], },
 end
 
 lemma dd_pos.eq6₀ :
@@ -989,11 +1092,14 @@ end
 
 end lemmas
 
-lemma dd {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) : d_pos (nat.zero_lt_succ _) (d_pos hn f) = 0 :=
+lemma dd_pos.eq0 {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) : d_pos (nat.zero_lt_succ _) (d_pos hn f) = 0 :=
 begin
   ext σ,
   convert dd_pos.eq26 hn f σ,
 end
+
+example (f : C 𝓕 𝔘 0) : C 𝓕 𝔘 1 :=
+d_pos zero_lt_one f
 
 end
 
