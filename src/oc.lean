@@ -12,7 +12,7 @@ structure oc : Type (u+1) :=
 (ι : Type.{u})
 [lo : linear_order ι . tactic.apply_instance] 
 [wo : is_well_order ι ((<) : ι → ι → Prop) . tactic.apply_instance]
-(cover : ι → opens.{u} X)
+(cover : ι → opens X)
 (is_cover : supr cover = ⊤)
 
 attribute [instance] oc.lo oc.wo
@@ -23,7 +23,7 @@ variables {X}
 A cover `𝔄` refines a cover `𝔅` if there is a function `f` between their indexing sets such that
 for all `i` in indexing set of `𝔄`, `𝔄ᵢ ⊆ 𝔅_{f i}`
 -/
-@[ext] structure refines (𝔄 𝔅 : X.oc) :=
+@[ext] structure refines (𝔄 𝔅 : X.oc) : Type (u+1) :=
 (func : 𝔄.ι → 𝔅.ι)
 (strict_mono : strict_mono func)
 (is_inj : function.injective func)
@@ -61,7 +61,7 @@ instance : has_bot X.oc :=
 --   le_trans := λ _ _ _ ⟨r1⟩ ⟨r2⟩, ⟨r1.trans r2⟩,
 --   lt_iff_le_not_le := λ _ _, ⟨id, id⟩ }
 
-instance : category_theory.category X.oc := 
+instance : category_theory.small_category X.oc := 
 { hom := λ A B, refines A B,
   id := λ A, refines.refl A,
   comp := λ A B C f g, refines.trans f g,

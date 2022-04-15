@@ -15,7 +15,8 @@ open opposite
 
 open_locale big_operators
 
-variable (X : Top) 
+universe u
+variable (X : Top.{u}) 
 
 variable {X}
 variable (𝓕 : sheaf Ab X)
@@ -25,7 +26,7 @@ local notation `ι ` := 𝔘.ι
 local notation `𝓕.obj` := 𝓕.1.obj
 local notation `𝓕.map` := 𝓕.1.map
 
-namespace C
+namespace Cech
 
 def carrier (n : ℕ) : Type* :=
 Π σ : simplex 𝔘 n, 𝓕.obj (op $ σ.face)
@@ -81,15 +82,15 @@ instance (n : ℕ) : add_comm_group (carrier 𝓕 𝔘 n) :=
   add_comm := λ f g, funext $ λ σ, by simp [add_comm],
   ..(_ : add_monoid (carrier 𝓕 𝔘 n))}
 
-end C
+end Cech
 
 section
 
 variable {X}
 def C (n : ℕ) : Ab :=
-⟨C.carrier 𝓕 𝔘 n⟩
+⟨Cech.carrier 𝓕 𝔘 n⟩
 
-lemma C.finset_sum_apply (n : ℕ) {α : Type*} [decidable_eq α] 
+lemma Cech.finset_sum_apply (n : ℕ) {α : Type*} [decidable_eq α] 
   (f : α → C 𝓕 𝔘 n) (s : finset α) (σ : simplex 𝔘 n) :
   (∑ i in s, f i) σ = ∑ i in s, f i σ :=
 begin
@@ -106,17 +107,17 @@ def d0 : C 𝓕 𝔘 0 ⟶ C 𝓕 𝔘 1 :=
     𝓕.map (σ.subset₀ 0).op (f (simplex.zero_from 𝔘 (σ.nth 0))) - 
     𝓕.map (σ.subset₀ 1).op (f (simplex.zero_from 𝔘 (σ.nth 1))),
   map_zero' := funext $ λ σ , begin
-    rw [C.zero_apply, C.zero_apply, map_zero, map_zero, sub_zero, C.zero_apply],
+    rw [Cech.zero_apply, Cech.zero_apply, map_zero, map_zero, sub_zero, Cech.zero_apply],
   end,
   map_add' := λ x y, funext $ λ σ, begin
-    rw [C.add_apply, map_add, C.add_apply, map_add, C.add_apply],
+    rw [Cech.add_apply, map_add, Cech.add_apply, map_add, Cech.add_apply],
     dsimp only,
     abel,
   end }
 
 end d0
 
-namespace d_pos
+namespace d_pos_def
 
 variables {n : ℕ} (hn : 0 < n) 
 
@@ -124,7 +125,7 @@ def to_fun.component (m : fin n.succ) : C 𝓕 𝔘 n.pred → C 𝓕 𝔘 n := 
 ite (even m.1) id has_neg.neg (𝓕.map (σ.der hn m).op (f (σ.ignore hn m)))
 
 def to_fun : C 𝓕 𝔘 n.pred → C 𝓕 𝔘 n := λ f,
-∑ i in (range n.succ).attach, d_pos.to_fun.component 𝓕 𝔘 hn ⟨i.1, mem_range.mp i.2⟩ f
+∑ i in (range n.succ).attach, d_pos_def.to_fun.component 𝓕 𝔘 hn ⟨i.1, mem_range.mp i.2⟩ f
 
 def map_zero' : to_fun 𝓕 𝔘 hn 0 = 0 := finset.sum_eq_zero $ λ ⟨m, hm⟩ h,
 begin
@@ -144,19 +145,19 @@ begin
   rintros m hm,
   unfold to_fun.component,
   split_ifs,
-  { ext σ, simp only [C.add_apply, map_add, id], },
+  { ext σ, simp only [Cech.add_apply, map_add, id], },
   { ext σ, 
     change - _ = - _ + - _,
-    rw [neg_eq_iff_neg_eq, neg_add, neg_neg, neg_neg, C.add_apply, map_add] },
+    rw [neg_eq_iff_neg_eq, neg_add, neg_neg, neg_neg, Cech.add_apply, map_add] },
 end
 
-end d_pos
+end d_pos_def
 
 variables {𝓕 𝔘}
 def d_pos {n : ℕ} (hn : 0 < n) : C 𝓕 𝔘 n.pred ⟶ C 𝓕 𝔘 n :=
-{ to_fun := d_pos.to_fun 𝓕 𝔘 hn,
-  map_zero' := d_pos.map_zero' _ _ _,
-  map_add' := d_pos.map_add' _ _ _ }
+{ to_fun := d_pos_def.to_fun 𝓕 𝔘 hn,
+  map_zero' := d_pos_def.map_zero' _ _ _,
+  map_add' := d_pos_def.map_add' _ _ _ }
 
 lemma d_pos.def {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) (σ : simplex 𝔘 n) :
   d_pos hn f σ = 
@@ -164,8 +165,11 @@ lemma d_pos.def {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) (σ : simplex �
     ite (even i.1) id has_neg.neg 
       (𝓕.map (σ.der hn ⟨i.1, mem_range.mp i.2⟩).op (f (σ.ignore hn ⟨i.1, mem_range.mp i.2⟩))) := 
 begin
-  unfold d_pos d_pos.to_fun,
-  rw [add_monoid_hom.coe_mk, C.finset_sum_apply],
+  dsimp only [d_pos],
+  -- unfold d_pos d_pos.to_fun,
+  rw [add_monoid_hom.coe_mk], 
+  dsimp only [d_pos_def.to_fun],
+  rw [Cech.finset_sum_apply],
   refine finset.sum_congr rfl (λ m hm, _),
   refl,
 end
@@ -859,7 +863,7 @@ lemma dd_pos.eq25 :
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) :=
 by rw [dd_pos.eq24, zero_add]
 
-lemma dd_pos.eq26 :
+lemma dd_pos_eq_zero :
   dd_pos hn f σ = 0 :=
 begin
   rw [dd_pos.eq25],
@@ -873,11 +877,8 @@ end lemmas
 lemma dd_pos.eq0 {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) : d_pos (nat.zero_lt_succ _) (d_pos hn f) = 0 :=
 begin
   ext σ,
-  convert dd_pos.eq26 hn f σ,
+  convert dd_pos_eq_zero hn f σ,
 end
-
-example (f : C 𝓕 𝔘 0) : C 𝓕 𝔘 1 :=
-d_pos zero_lt_one f
 
 end
 

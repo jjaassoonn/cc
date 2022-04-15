@@ -2,13 +2,15 @@ import cech_d
 import algebra.homology.homological_complex
 import category_theory.opposites
 import oc
+import simplex
+import algebra.category.Group.colimits
 
 section
 
 open category_theory Top Top.presheaf category_theory.limits
 
 universe u
-variables {X : Top} (𝓕 : sheaf Ab X) (𝔘 : X.ocᵒᵖ)
+variables {X : Top.{u}} (𝓕 : sheaf Ab X) (𝔘 : X.ocᵒᵖ)
 
 section
 
@@ -33,11 +35,11 @@ def C.refine (n : ℕ) {A B : oc X} (h : A ⟶ B) :
 { to_fun := λ f σ, 𝓕.1.map (hom_of_le $ face.refine h σ).op $ f (σ.refine h),
   map_zero' := begin
     ext σ,
-    rw [C.zero_apply, map_zero, C.zero_apply],
+    rw [Cech.zero_apply, map_zero, Cech.zero_apply],
   end,
   map_add' := λ f g, begin
     ext σ,
-    rw [C.add_apply, map_add, C.add_apply],
+    rw [Cech.add_apply, map_add, Cech.add_apply],
   end }
 
 
@@ -88,7 +90,7 @@ begin
 end
 
 def C.refine_functor (n : ℕ) : X.ocᵒᵖ ⥤ Ab :=
-{ obj := λ A, C 𝓕 (unop A) n,
+{ obj := λ A, C 𝓕 A.unop n,
   map := λ A B f, C.refine 𝓕 n f.unop,
   map_id' := λ A, C.refine_self 𝓕 n A.unop,
   map_comp' := λ A B D f g, by rw [unop_comp, C.refine_comp] }
@@ -138,8 +140,8 @@ def cech_chain.functor : X.ocᵒᵖ ⥤ cochain_complex Ab ℕ :=
       ext f σ,
       change (d.from_to _ _ i (i + 1)) (C.refine 𝓕 _ r.unop f) σ = (C.refine 𝓕 _ r.unop) (d.from_to _ _ _ _ _) _,
       rw [d.to_succ, d_pos.def, d.to_succ],
-      unfold C.refine,
-      rw [add_monoid_hom.coe_mk, add_monoid_hom.coe_mk, d_pos.def, add_monoid_hom.map_sum],
+      change _ = 𝓕.1.map _ _,
+      rw [d_pos.def, add_monoid_hom.map_sum],
       apply finset.sum_congr rfl (λ j hj, _),
       by_cases e : even j.1,
       { rw [if_pos e, id, if_pos e, id],
@@ -177,6 +179,86 @@ def cech_chain.functor : X.ocᵒᵖ ⥤ cochain_complex Ab ℕ :=
     rw category_theory.functor.map_comp,
     refl,
   end }
+
+
+inductive ulift_one (α : Type u) : Type (u+1)
+| intro : α → ulift_one
+
+def ulift_one.down {α : Type u} (x : ulift_one α) : α :=
+ulift_one.rec id x
+
+instance (α : Type u) [add_comm_group α] : add_comm_group (ulift_one α) :=
+{ add := λ a b, ulift_one.intro $ a.down + b.down,
+  add_assoc := λ a b c, begin
+    induction a,
+    induction b,
+    induction c,
+    change ulift_one.intro _ = ulift_one.intro _,
+    congr' 1,
+    change ulift_one.down _ + ulift_one.down _ + _ = _,
+    rw add_assoc,
+    refl,
+  end,
+  zero := ulift_one.intro 0,
+  zero_add := sorry,
+  add_zero := sorry,
+  nsmul := λ n a, ulift_one.intro $ n • a.down,
+  nsmul_zero' := sorry,
+  nsmul_succ' := sorry,
+  neg := λ a, ulift_one.intro $ - a.down,
+  sub := λ a b, ulift_one.intro $ a.down - b.down,
+  sub_eq_add_neg := sorry,
+  zsmul := λ n a, ulift_one.intro $ n • a.down,
+  zsmul_zero' := sorry,
+  zsmul_succ' := sorry,
+  zsmul_neg' := sorry,
+  add_left_neg := sorry,
+  add_comm := sorry }
+
+include 𝓕
+
+-- #check ulift_one (C 𝓕)
+def test (n : ℕ) : X.ocᵒᵖ ⥤ Ab.{u+1} :=
+{ obj := λ A, 
+  { α := ulift_one (C 𝓕 A.unop n),
+    str := infer_instance },
+  map := λ A B f, sorry,
+  map_id' := λ A, sorry,
+  map_comp' := λ A B D f g, sorry }
+
+example (n : ℕ) : true :=
+begin
+  have := colimit (test 𝓕 n),
+  have := @colimit X.ocᵒᵖ _ Ab _ (test 𝓕 n) begin
+    haveI : has_colimits Ab.{u+2} := infer_instance,
+    have := AddCommGroup.colimits.has_colimits_AddCommGroup,
+    have := @has_colimits.has_colimits_of_shape Ab.{u+1} _ _ X.ocᵒᵖ _,
+    apply_instance,
+  end,
+  sorry
+end
+-- instance : has_colimits Ab := begin
+--   exact AddCommGroup.colimits.has_colimits_AddCommGroup,
+-- end
+-- #print AddCommGroup.colimits.has_colimits_AddCommGroup
+-- example : cochain_complex Ab.{u+1} ℕ :=
+-- { X := λ n, begin
+--     -- have := colimit (C.refine_functor 𝓕 n),
+--     have := @colimit X.ocᵒᵖ _ Ab _ (C.refine_functor 𝓕 n) begin
+--       haveI : has_colimits Ab := infer_instance,
+--       have := AddCommGroup.colimits.has_colimits_AddCommGroup,
+--       have := @has_colimits.has_colimits_of_shape Ab.{u} _ _ X.ocᵒᵖ begin
+--         have := (category.opposite : category X.ocᵒᵖ),
+        
+--       end,
+--       apply_instance,
+--       -- haveI : has_colimits_of_shape X.ocᵒᵖ Ab := infer_instance,
+--       exactI _inst,
+--     end,
+--   end,
+--   d := _,
+--   shape' := _,
+--   d_comp_d' := _ }
 
 end
 
