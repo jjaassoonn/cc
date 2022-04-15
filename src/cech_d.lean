@@ -5,11 +5,12 @@ import for_mathlib.lemmas
 import data.nat.parity
 import algebra.category.Group.limits
 import algebra.category.Group.abelian
+import simplex
 import tactic
 
 section
 
-open category_theory Top Top.sheaf topological_space finset
+open category_theory Top Top.sheaf topological_space finset simplex
 open opposite
 
 open_locale big_operators
@@ -24,233 +25,10 @@ local notation `ι ` := 𝔘.ι
 local notation `𝓕.obj` := 𝓕.1.obj
 local notation `𝓕.map` := 𝓕.1.map
 
-@[ext] structure simplex (n : ℕ) extends finset ι :=
-(card_eq : to_finset.card = n.succ)
-
-attribute [simp] simplex.card_eq
-
-namespace simplex
-
-variables {𝔘}
-
-def nth {n : ℕ} (σ : simplex 𝔘 n) (m : fin n.succ) : ι :=
-σ.to_finset.order_emb_of_fin σ.2 m
-
-instance {n : ℕ} : has_mem ι (simplex 𝔘 n) :=
-{ mem := λ i σ, i ∈ σ.to_finset }
-
-lemma nth_mem {n : ℕ} (σ : simplex 𝔘 n) (m : fin n.succ) :
-  σ.nth m ∈ σ :=
-σ.to_finset.order_emb_of_fin_mem σ.card_eq m
-
-def zero_from (i : ι) : simplex 𝔘 0 :=
-{ to_finset := {i},
-  card_eq := rfl }
-
-variables {n : ℕ} (hn : 0 < n)
-
-def ignore (σ : simplex 𝔘 n) (m : fin n.succ) : simplex 𝔘 n.pred :=
-{ to_finset := σ.1.erase_nth σ.2 m,
-  card_eq := (nat.succ_pred_eq_of_pos hn).symm ▸ σ.1.erase_nth_card _ m }
-
-lemma mem_ignore (σ : simplex 𝔘 n) (m : fin n.succ) (i : ι) :
-  i ∈ σ.ignore hn m ↔ i ∈ σ ∧ i ≠ σ.nth m :=
-begin
-  split,
-  { intros hi,
-    change i ∈ simplex.to_finset _ at hi,
-    unfold ignore at hi,
-    dsimp only at hi,
-    rw mem_erase_nth at hi,
-    refine ⟨hi.2, hi.1⟩, },
-  { intros hi,
-    change i ∈ simplex.to_finset _,
-    unfold ignore,
-    dsimp only,
-    rw mem_erase_nth,
-    refine ⟨hi.2, hi.1⟩, },
-end 
-
-def ignore₂ (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) : simplex 𝔘 n.pred :=
-(σ.ignore (nat.zero_lt_succ _) m).ignore hn m'
-
-lemma ignore_subset (σ : simplex 𝔘 n) (m : fin n.succ) :
-  (σ.ignore hn m).to_finset ⊆ σ.to_finset := λ x hx,
-begin
-  change x ∈ finset.erase _ _ at hx,
-  rw finset.mem_erase at hx,
-  exact hx.2,
-end
-
-lemma ignore₂_subset (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) :
-  (σ.ignore₂ hn m m').to_finset ⊆ σ.to_finset :=
-subset.trans ((σ.ignore (nat.zero_lt_succ _) m).ignore_subset hn m') $ σ.ignore_subset _ _
-
-lemma ignore₂_to_finset_case1 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
-  (hmm' : m'.1 < m.1) :
-  (σ.ignore₂ hn m m').to_finset =
-  σ.to_finset \ 
-  { σ.1.order_emb_of_fin σ.2 m, 
-    σ.1.order_emb_of_fin σ.2 ⟨m'.1, lt_trans m'.2 (lt_add_one n.succ)⟩ } :=
-begin
-  unfold ignore₂ ignore,
-  dsimp,
-  ext i,
-  split,
-  { intros hi,
-    erw [mem_erase_nth, σ.to_finset.erase_order_emb_of_fin'_eq σ.2 m] at hi,
-    unfold erase_order_emb_of_fin' at hi,
-    simp only [rel_embedding.coe_fn_mk, function.embedding.coe_fn_mk, ne.def, if_pos hmm', mem_erase_nth] at hi,
-    rw [mem_sdiff, mem_insert, mem_singleton, not_or_distrib],
-    tauto },
-  { intros hi,
-    erw [mem_erase_nth, σ.to_finset.erase_order_emb_of_fin'_eq σ.2 m, mem_erase_nth],
-    rw [mem_sdiff, mem_insert, mem_singleton, not_or_distrib] at hi,
-    refine ⟨_, hi.2.1, hi.1⟩,
-    convert hi.2.2,
-    unfold erase_order_emb_of_fin',
-    simp only [rel_embedding.coe_fn_mk, function.embedding.coe_fn_mk, ne.def, if_pos hmm', mem_erase_nth],
-    refl, }
-end
-
-lemma ignore₂_to_finset_case2 (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
-  (hmm' : m.1 ≤ m'.1) :
-  (σ.ignore₂ hn m m').to_finset =
-  σ.to_finset \ 
-  { σ.to_finset.order_emb_of_fin σ.2 m, 
-    σ.to_finset.order_emb_of_fin σ.2 ⟨m'.1.succ, nat.succ_lt_succ m'.2⟩ } :=
-begin
-  have ineq : ¬ m'.1 < m.1,
-  { rwa not_lt },
-  unfold ignore₂ ignore,
-  dsimp,
-  ext i,
-  split,
-  { intros hi,
-    erw [mem_erase_nth, σ.to_finset.erase_order_emb_of_fin'_eq σ.2 m] at hi,
-    unfold erase_order_emb_of_fin' at hi,
-    simp only [rel_embedding.coe_fn_mk, function.embedding.coe_fn_mk, ne.def, if_neg ineq, mem_erase_nth] at hi,
-    rw [mem_sdiff, mem_insert, mem_singleton, not_or_distrib],
-    tauto },
-  { intros hi,
-    erw [mem_erase_nth, σ.to_finset.erase_order_emb_of_fin'_eq σ.2 m, mem_erase_nth],
-    rw [mem_sdiff, mem_insert, mem_singleton, not_or_distrib] at hi,
-    refine ⟨_, hi.2.1, hi.1⟩,
-    convert hi.2.2,
-    unfold erase_order_emb_of_fin',
-    simp only [rel_embedding.coe_fn_mk, function.embedding.coe_fn_mk, ne.def, if_neg ineq, mem_erase_nth],
-    refl, }
-end
-
-lemma ignore₂_eq_ignore₂.aux (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
-  (hmm' : m.1 ≤ m'.1) :
-  (σ.ignore₂ hn m m').to_finset = 
-  (σ.ignore₂ hn ⟨m'.1.succ, nat.succ_lt_succ m'.2⟩ ⟨m.1, by linarith [m'.2]⟩).to_finset :=
-begin
-  rw [ignore₂_to_finset_case2 _ _ _ _ hmm', ignore₂_to_finset_case1],
-  { ext i,
-    split;
-    { intros hi,
-      rw [mem_sdiff, mem_insert, mem_singleton, not_or_distrib] at hi ⊢,
-      tauto, } },
-  { dsimp only,
-    exact lt_of_le_of_lt hmm' (lt_add_one _), },
-end
-
-lemma ignore₂_eq_ignore₂ (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ)
-  (hmm' : m.1 ≤ m'.1) :
-  (σ.ignore₂ hn m m') = 
-  (σ.ignore₂ hn ⟨m'.1.succ, nat.succ_lt_succ m'.2⟩ ⟨m.1, by linarith [m'.2]⟩) :=
-by rw [simplex.ext_iff, ignore₂_eq_ignore₂.aux]
-
-end simplex
-
-def face {n : ℕ} (σ : simplex 𝔘 n) : opens X :=
-⨅ (i : ι) (H : i ∈ σ.to_finset), 𝔘.cover i
-
-lemma face0 (σ : simplex 𝔘 0) :
-  face 𝔘 σ = 𝔘.cover (σ.nth 0) := 
-begin
-  unfold face,
-  have eq1 : σ.to_finset = {σ.nth 0},
-  { rcases card_eq_one.mp σ.2 with ⟨a, eq1⟩,
-    have := σ.nth_mem 0,
-    change _ ∈ σ.to_finset at this,
-    rw eq1 at *,
-    rw mem_singleton at this,
-    rw this },
-  rw [eq1, finset.infi_singleton],
-end
-
-lemma face1 (σ : simplex 𝔘 1) :
-  face 𝔘 σ = 𝔘.cover (σ.nth 0) ⊓ 𝔘.cover (σ.nth ⟨1, one_lt_two⟩) :=
-begin
-  rcases card_eq_two.mp σ.2 with ⟨a, b, ineq, eq1⟩,
-  have mem1 : (_ ∈ σ.to_finset) := σ.nth_mem 0,
-  have mem2 : (_ ∈ σ.to_finset) := σ.nth_mem ⟨1, one_lt_two⟩,
-  have ineq2 : σ.nth 0 ≠ σ.nth ⟨1, one_lt_two⟩,
-  { intro rid,
-    unfold simplex.nth at rid,
-    replace rid := (σ.to_finset.order_emb_of_fin σ.2).inj' rid,
-    rw subtype.ext_iff_val at rid,
-    change 0 = 1 at rid,
-    linarith, },
-  rw [eq1, mem_insert, mem_singleton] at mem1 mem2,
-  unfold face,
-  rw [eq1, finset.infi_insert, finset.infi_singleton],
-  cases mem1;
-  cases mem2;
-  rw [mem1, mem2] at *;
-  tauto <|> exact inf_comm,
-end
-
-def subset₀ {n : ℕ} (σ : simplex 𝔘 n) (m : fin n.succ) :
-  face 𝔘 σ ⟶ face 𝔘 (simplex.zero_from 𝔘 (σ.nth m)) := hom_of_le $ λ p hp, 
-begin
-  rw [opens.mem_coe] at hp ⊢,
-  rw face0,
-  change _ ∈ (infi _) at hp,
-  have := (infi_le _ : ∀ _, face 𝔘 σ ≤ _),
-  specialize this ((simplex.zero_from 𝔘 (σ.nth m)).nth 0),
-  simp only [le_infi_iff] at this,
-  refine this _ hp,
-  have : _ ∈ {_} := (simplex.zero_from 𝔘 (σ.nth m)).nth_mem 0,
-  rw mem_singleton at this,
-  rw this,
-  apply simplex.nth_mem,
-end
-
-def der {n : ℕ} (hn : 0 < n) (σ : simplex 𝔘 n) (m : fin n.succ) :
-  face 𝔘 σ ⟶ face 𝔘 (σ.ignore hn m) := hom_of_le $ λ p hp, 
-begin
-  rw [opens.mem_coe] at hp ⊢,
-  rcases hp with ⟨S, ⟨oS, hS⟩, p_mem⟩,
-  refine ⟨S, ⟨oS, λ x x_mem, _⟩, p_mem⟩,
-  specialize hS x_mem,
-  simp only [subtype.val_eq_coe, set.Inf_eq_sInter, set.sInter_image, set.mem_range, 
-    set.Inter_exists, set.Inter_Inter_eq', set.mem_Inter, opens.mem_coe] at hS ⊢,
-  intros i,
-  specialize hS i,
-  rcases hS with ⟨w, ⟨hw1, hw2⟩, hx⟩,
-  refine ⟨w, ⟨hw1, _⟩, hx⟩,
-  intros y hy,
-  specialize hw2 hy,
-  simp only [subtype.val_eq_coe, set.Inf_eq_sInter, set.sInter_image, set.mem_range, exists_prop, 
-    set.mem_Inter, opens.mem_coe, and_imp, forall_apply_eq_imp_iff'] at hw2 ⊢,
-  intros hi2,
-  apply hw2,
-  apply simplex.ignore_subset,
-  exact hi2,
-end
-
-def dder {n : ℕ} (hn : 0 < n) (σ : simplex 𝔘 n.succ) (m : fin n.succ.succ) (m' : fin n.succ) :
-  face 𝔘 σ ⟶ face 𝔘 (σ.ignore₂ hn m m') :=
-der 𝔘 (nat.zero_lt_succ _) σ m ≫ der 𝔘 _ (σ.ignore _ m) m'
-
 namespace C
 
 def carrier (n : ℕ) : Type* :=
-Π σ : simplex 𝔘 n, 𝓕.obj (op $ face 𝔘 σ)
+Π σ : simplex 𝔘 n, 𝓕.obj (op $ σ.face)
 
 instance (n : ℕ) : has_zero (carrier 𝓕 𝔘 n) :=
 { zero := λ σ, 0 }
@@ -325,8 +103,8 @@ section d0
 variables {𝓕 𝔘}
 def d0 : C 𝓕 𝔘 0 ⟶ C 𝓕 𝔘 1 :=
 { to_fun := λ f σ, 
-    𝓕.map (subset₀ 𝔘 σ 0).op (f (simplex.zero_from 𝔘 (σ.nth 0))) - 
-    𝓕.map (subset₀ 𝔘 σ 1).op (f (simplex.zero_from 𝔘 (σ.nth 1))),
+    𝓕.map (σ.subset₀ 0).op (f (simplex.zero_from 𝔘 (σ.nth 0))) - 
+    𝓕.map (σ.subset₀ 1).op (f (simplex.zero_from 𝔘 (σ.nth 1))),
   map_zero' := funext $ λ σ , begin
     rw [C.zero_apply, C.zero_apply, map_zero, map_zero, sub_zero, C.zero_apply],
   end,
@@ -343,7 +121,7 @@ namespace d_pos
 variables {n : ℕ} (hn : 0 < n) 
 
 def to_fun.component (m : fin n.succ) : C 𝓕 𝔘 n.pred → C 𝓕 𝔘 n := λ f σ,
-ite (even m.1) id has_neg.neg (𝓕.map (der 𝔘 hn σ m).op (f (σ.ignore hn m)))
+ite (even m.1) id has_neg.neg (𝓕.map (σ.der hn m).op (f (σ.ignore hn m)))
 
 def to_fun : C 𝓕 𝔘 n.pred → C 𝓕 𝔘 n := λ f,
 ∑ i in (range n.succ).attach, d_pos.to_fun.component 𝓕 𝔘 hn ⟨i.1, mem_range.mp i.2⟩ f
@@ -384,7 +162,7 @@ lemma d_pos.def {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) (σ : simplex �
   d_pos hn f σ = 
   ∑ i in (range n.succ).attach, 
     ite (even i.1) id has_neg.neg 
-      (𝓕.map (der 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩).op (f (σ.ignore hn ⟨i.1, mem_range.mp i.2⟩))) := 
+      (𝓕.map (σ.der hn ⟨i.1, mem_range.mp i.2⟩).op (f (σ.ignore hn ⟨i.1, mem_range.mp i.2⟩))) := 
 begin
   unfold d_pos d_pos.to_fun,
   rw [add_monoid_hom.coe_mk, C.finset_sum_apply],
@@ -406,7 +184,7 @@ lemma dd_pos.eq2 :
   dd_pos hn f σ =
   ∑ i in (range n.succ.succ).attach,
     (ite (even i.1) id has_neg.neg) 
-      (𝓕.map (der 𝔘 (nat.zero_lt_succ _) σ ⟨i.1, mem_range.mp i.2⟩).op 
+      (𝓕.map (σ.der (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).op 
         ((d_pos hn f) (σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩))) := 
 by rw [dd_pos.eq1, d_pos.def]
 
@@ -414,17 +192,17 @@ lemma dd_pos.eq3 :
   dd_pos hn f σ =
   ∑ i in (range n.succ.succ).attach,
     ite (even i.1) id has_neg.neg
-      (𝓕.map (der 𝔘 (nat.zero_lt_succ _) σ ⟨i.1, mem_range.mp i.2⟩).op 
+      (𝓕.map (σ.der (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).op 
         (∑ j in (range n.succ).attach, 
           ite (even j.1) id has_neg.neg
-            (𝓕.map (der 𝔘 hn (σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩) ⟨j.1, mem_range.mp j.2⟩).op 
+            (𝓕.map ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).der hn ⟨j.1, mem_range.mp j.2⟩).op 
               (f ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).ignore hn ⟨j.1, mem_range.mp j.2⟩))))) := 
 begin
   rw dd_pos.eq2,
   apply sum_congr rfl (λ m hm, _),
   apply congr_arg,
   congr' 1,
-  rw d_pos.def
+  rw d_pos.def,
 end
 
 lemma dd_pos.eq4 :
@@ -432,9 +210,9 @@ lemma dd_pos.eq4 :
   ∑ i in (range n.succ.succ).attach,
     ite (even i.1) id has_neg.neg 
       (∑ j in (range n.succ).attach,
-        𝓕.map (der 𝔘 (nat.zero_lt_succ _) σ ⟨i.1, mem_range.mp i.2⟩).op
+        𝓕.map (σ.der (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).op
         (ite (even j.1) id has_neg.neg
-          (𝓕.map (der 𝔘 hn (σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩) ⟨j.1, mem_range.mp j.2⟩).op 
+          (𝓕.map ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).der hn ⟨j.1, mem_range.mp j.2⟩).op 
             (f ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).ignore hn ⟨j.1, mem_range.mp j.2⟩))))) := 
 begin
   rw dd_pos.eq3,
@@ -449,8 +227,8 @@ lemma dd_pos.eq5 :
     ite (even i.1) id has_neg.neg 
       (∑ j in (range n.succ).attach,
         ite (even j.1) id has_neg.neg
-          (𝓕.map (der 𝔘 (nat.zero_lt_succ _) σ ⟨i.1, mem_range.mp i.2⟩).op
-            (𝓕.map (der 𝔘 hn (σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩) ⟨j.1, mem_range.mp j.2⟩).op 
+          (𝓕.map (σ.der (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).op
+            (𝓕.map ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).der hn ⟨j.1, mem_range.mp j.2⟩).op 
               (f ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).ignore hn ⟨j.1, mem_range.mp j.2⟩))))) := 
 begin
   rw dd_pos.eq4,
@@ -473,7 +251,7 @@ lemma dd_pos.eq6₀ :
     ite (even i.1) id has_neg.neg 
       (∑ j in (range n.succ).attach,
         ite (even j.1) id has_neg.neg
-          (𝓕.map ((der 𝔘 hn (σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩) ⟨j.1, mem_range.mp j.2⟩).op ≫ (der 𝔘 (nat.zero_lt_succ _) σ ⟨i.1, mem_range.mp i.2⟩).op)
+          (𝓕.map (((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).der hn ⟨j.1, mem_range.mp j.2⟩).op ≫ (σ.der (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).op)
             (f ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).ignore hn ⟨j.1, mem_range.mp j.2⟩)))) := 
 begin
   rw dd_pos.eq5,
@@ -491,7 +269,7 @@ lemma dd_pos.eq6₁ :
     ite (even i.1) id has_neg.neg 
       (∑ j in (range n.succ).attach,
         ite (even j.1) id has_neg.neg
-          (𝓕.map ((der 𝔘 (nat.zero_lt_succ _) σ ⟨i.1, mem_range.mp i.2⟩) ≫ (der 𝔘 hn (σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩) ⟨j.1, mem_range.mp j.2⟩)).op
+          (𝓕.map ((σ.der (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩) ≫ ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).der hn ⟨j.1, mem_range.mp j.2⟩)).op
             (f ((σ.ignore (nat.zero_lt_succ _) ⟨i.1, mem_range.mp i.2⟩).ignore hn ⟨j.1, mem_range.mp j.2⟩)))) := 
 begin
   rw dd_pos.eq6₀,
@@ -507,7 +285,7 @@ lemma dd_pos.eq6₂ :
     ite (even i.1) id has_neg.neg 
       (∑ j in (range n.succ).attach,
         ite (even j.1) id has_neg.neg
-          (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
+          (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩)))) := 
 begin
   rw dd_pos.eq6₁,
@@ -525,7 +303,7 @@ lemma dd_pos.eq7 :
     ∑ j in (range n.succ).attach,
       ite (even i.1) id has_neg.neg 
         (ite (even j.1) id has_neg.neg
-          (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
+          (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩)))) := 
 begin
   rw dd_pos.eq6₂,
@@ -541,7 +319,7 @@ lemma dd_pos.eq8 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range n.succ).attach,
       ite (even (i.1 + j.1)) id has_neg.neg 
-        (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
+        (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩))) := 
 begin
   rw dd_pos.eq7,
@@ -568,11 +346,11 @@ lemma dd_pos.eq9 :
   ∑ i in (range n.succ.succ).attach,
     (∑ j in (range n.succ).attach.filter (λ n, i.1 ≤ n.1),
       ite (even (i.1 + j.1)) id has_neg.neg 
-        (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
+        (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩))) +
     ∑ j in (range n.succ).attach.filter (λ n, n.1 < i.1),
       ite (even (i.1 + j.1)) id has_neg.neg 
-        (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
+        (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩)))) := 
 begin
   rw dd_pos.eq8,
@@ -597,11 +375,11 @@ lemma dd_pos.eq10 :
   ∑ i in (range n.succ.succ).attach,
     (∑ j in ((range n.succ).filter (λ n, i.1 ≤ n)).attach,
       ite (even (i.1 + j.1)) id has_neg.neg 
-        (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp (mem_filter.mp j.2).1⟩).op
+        (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp (mem_filter.mp j.2).1⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp (mem_filter.mp j.2).1⟩))) +
     ∑ j in (range n.succ).attach.filter (λ n, n.1 < i.1),
       ite (even (i.1 + j.1)) id has_neg.neg 
-        (𝓕.map (dder 𝔘 hn σ ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
+        (𝓕.map (σ.dder hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩).op
             (f (σ.ignore₂ hn ⟨i.1, mem_range.mp i.2⟩ ⟨j.1, mem_range.mp j.2⟩)))) := 
 begin
   rw dd_pos.eq9,
@@ -624,12 +402,12 @@ lemma dd_pos.eq11 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range n.succ).attach.filter (λ m, i.val ≤ m.val),
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range n.succ).attach.filter (λ m, m.val < i.val),
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) := 
 begin
   rw [dd_pos.eq9, sum_add_distrib],
@@ -640,12 +418,12 @@ lemma dd_pos.eq12 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range n.succ).attach.filter (λ m, i.val ≤ m.val),
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range n.succ).attach.filter (λ m, m.val < i.val),
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) := 
 begin
   rw [dd_pos.eq11],
@@ -656,12 +434,12 @@ lemma dd_pos.eq13 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range n.succ).attach.filter (λ m, m.val < i.val),
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) := 
 begin
   rw [dd_pos.eq12],
@@ -690,12 +468,12 @@ lemma dd_pos.eq14 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (range i.1).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, lt_of_lt_of_le (mem_range.mp j.2) (nat.le_of_lt_succ (mem_range.mp i.2))⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, lt_of_lt_of_le (mem_range.mp j.2) (nat.le_of_lt_succ (mem_range.mp i.2))⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) := 
 begin
   rw [dd_pos.eq13],
@@ -725,12 +503,12 @@ lemma dd_pos.eq15 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ j in (range n.succ).attach,
     ∑ i in (Ico j.1.succ n.succ.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, (mem_Ico.mp i.2).2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, (mem_Ico.mp i.2).2⟩ ⟨j.val, mem_range.mp j.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) := 
 begin
   rw [dd_pos.eq14],
@@ -768,16 +546,16 @@ lemma dd_pos.eq16 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ).attach,
     ∑ j in (Ico i.1.succ n.succ.succ).attach,
       ite (even (j.val + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨j.val, (mem_Ico.mp j.2).2⟩ ⟨i.val, mem_range.mp i.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨j.val, (mem_Ico.mp j.2).2⟩ ⟨i.val, mem_range.mp i.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨j.val, _⟩ ⟨i.val, _⟩))) := dd_pos.eq15 _ _ _
 
 lemma 𝓕_map_congr (σ1 σ2 : simplex 𝔘 n.pred) (h : σ1 = σ2) (f : C 𝓕 𝔘 n.pred)
-  (i1 : face 𝔘 σ ⟶ face 𝔘 σ1) (i2 : face 𝔘 σ ⟶ face 𝔘 σ2) :
+  (i1 : σ.face ⟶ σ1.face) (i2 : σ.face ⟶ σ2.face) :
   𝓕.map i1.op (f σ1) = 𝓕.map i2.op (f σ2) :=
 begin
   subst h,
@@ -789,12 +567,12 @@ lemma dd_pos.eq17 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (j.1.succ + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨j.1.succ, nat.succ_lt_succ (mem_Ico.mp j.2).2⟩ ⟨i.val, mem_range.mp i.2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨j.1.succ, nat.succ_lt_succ (mem_Ico.mp j.2).2⟩ ⟨i.val, mem_range.mp i.2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨j.1.succ, _⟩ ⟨i.val, _⟩))) :=
 begin
   rw dd_pos.eq16,
@@ -858,12 +636,12 @@ lemma dd_pos.eq18 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (j.1.succ + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw dd_pos.eq17,
@@ -889,12 +667,12 @@ lemma dd_pos.eq19 :
   ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ).attach,
     -∑ j in (Ico i.1 n.succ).attach,
       ite (even (j.1 + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw dd_pos.eq18,
@@ -927,26 +705,26 @@ lemma dd_pos.eq20 :
   ∑ i in (range n.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ j in (Ico n.succ n.succ).attach,
     ite (even (n.succ + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ).attach,
     -∑ j in (Ico i.1 n.succ).attach,
       ite (even (j.1 + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 have eq0 : ∑ i in (range n.succ.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, mem_range.mp i.2⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) = 
 ∑ i in (insert n.succ (range n.succ)).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, begin
+        ((𝓕.val.map (σ.dder hn ⟨i.val, begin
           have h := i.2,
           simp only [← range_succ] at h,
           rwa mem_range at h,
@@ -1008,16 +786,16 @@ lemma dd_pos.eq21 :
   ∑ i in (range n.succ).attach,
     ∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
   ∑ i in (range n.succ).attach,
     -∑ j in (Ico i.1 n.succ).attach,
       ite (even (j.1 + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.1, _⟩ ⟨j.1, _⟩))) +
   ∑ j in (Ico n.succ n.succ).attach,
     ite (even (n.succ + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) :=
 begin
   rw dd_pos.eq20,
@@ -1029,15 +807,15 @@ lemma dd_pos.eq22 :
   ∑ i in (range n.succ).attach,
     (∑ j in (Ico i.1 n.succ).attach,
       ite (even (i.val + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.val, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.val, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.val, _⟩ ⟨j.val, _⟩))) +
     -∑ j in (Ico i.1 n.succ).attach,
       ite (even (j.1 + i.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨i.1, lt_trans (mem_range.mp i.2) (lt_add_one _)⟩ ⟨j.1, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨i.1, _⟩ ⟨j.1, _⟩)))) +
   ∑ j in (Ico n.succ n.succ).attach,
     ite (even (n.succ + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) :=
 begin
   rw [dd_pos.eq21, sum_add_distrib],
@@ -1048,7 +826,7 @@ lemma dd_pos.eq23 :
   ∑ i in (range n.succ).attach, 0 +
   ∑ j in (Ico n.succ n.succ).attach,
     ite (even (n.succ + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) :=
 begin
   rw [dd_pos.eq22],
@@ -1063,7 +841,7 @@ lemma dd_pos.eq24 :
   dd_pos hn f σ =
   0 + ∑ j in (Ico n.succ n.succ).attach,
     ite (even (n.succ + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) :=
 begin
   rw [dd_pos.eq23],
@@ -1077,7 +855,7 @@ lemma dd_pos.eq25 :
   dd_pos hn f σ =
   ∑ j in (Ico n.succ n.succ).attach,
     ite (even (n.succ + j.val)) id has_neg.neg
-        ((𝓕.val.map (dder 𝔘 hn σ ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
+        ((𝓕.val.map (σ.dder hn ⟨n.succ, lt_add_one _⟩ ⟨j.val, (mem_Ico.mp j.2).2⟩).op)
            (f (simplex.ignore₂ hn σ ⟨n.succ, _⟩ ⟨j.val, _⟩))) :=
 by rw [dd_pos.eq24, zero_add]
 
