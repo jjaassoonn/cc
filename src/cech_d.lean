@@ -1,7 +1,7 @@
 import topology.sheaves.sheaf
 import sort
 import oc
-import for_mathlib.lemmas
+import lemmas.lemmas
 import data.nat.parity
 import algebra.category.Group.limits
 import algebra.category.Group.abelian
@@ -874,9 +874,9 @@ end
 
 end lemmas
 
-lemma dd_pos.eq0 {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) : d_pos (nat.zero_lt_succ _) (d_pos hn f) = 0 :=
+lemma dd_pos.eq0 {n : ℕ} (hn : 0 < n) : (d_pos hn : C 𝓕 𝔘 _ ⟶ _) ≫ d_pos (nat.zero_lt_succ _) = 0 :=
 begin
-  ext σ,
+  ext f σ,
   convert dd_pos_eq_zero hn f σ,
 end
 
