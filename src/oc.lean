@@ -18,6 +18,13 @@ structure oc : Type (u+1) :=
 attribute [instance] oc.lo oc.wo
 attribute [simp] oc.is_cover
 
+instance (A : X.oc) [nonempty X] : nonempty A.ι :=
+⟨nonempty.some $ classical.by_contradiction $ λ r, @@is_empty.false (not_nonempty_iff.mp r) $ 
+  (opens.mem_supr.mp (by rw A.is_cover; trivial : nonempty.some infer_instance ∈ supr A.cover)).some⟩
+
+noncomputable instance (A : X.oc) [inhabited X] : inhabited A.ι :=
+⟨nonempty.some infer_instance⟩
+
 variables {X} 
 /--
 A cover `𝔄` refines a cover `𝔅` if there is a function `f` between their indexing sets such that
@@ -47,12 +54,27 @@ def refines.trans {𝔄 𝔅 ℭ : X.oc} (r1 : refines 𝔄 𝔅) (r2 : refines 
 -- instance : has_lt X.oc :=
 -- { lt := λ 𝔄 𝔅, 𝔄 ≤ 𝔅 ∧ ¬ 𝔅 ≤ 𝔄 }
 
-instance : has_bot X.oc :=
-{ bot := 
+instance : inhabited X.oc :=
+{ default := 
   { ι := punit,
     wo := ⟨{ apply := λ x, by { cases x, fconstructor, rintros ⟨-⟩ r, exfalso, simpa using r } }⟩,
     cover := λ _, ⊤,
     is_cover := by simp } }
+
+-- this is probably wrong
+-- example (A : X.oc) (f : refines A A) (i) : f.func i = i :=
+-- begin
+--   have := @trichotomous _ ((<) : A.ι → A.ι → Prop) _ (f.func i) i,
+--   rcases this,
+--   { -- this is contradiction
+--     -- suppose `a` is the least function such that `f a < a` then `f f a < f a < a` contradiction
+--     sorry },
+--   { rcases this,
+--     { exact this },
+--     { -- 
+--       sorry } },
+-- end
+
 
 -- instance : preorder X.oc :=
 -- { le := (≤),
@@ -61,6 +83,27 @@ instance : has_bot X.oc :=
 --   le_trans := λ _ _ _ ⟨r1⟩ ⟨r2⟩, ⟨r1.trans r2⟩,
 --   lt_iff_le_not_le := λ _ _, ⟨id, id⟩ }
 
+-- def common_refinement (A B : X.oc) : X.oc :=
+-- { ι := A.ι ⊕ B.ι,
+--   lo := 
+--   { le := sum.lex ((≤) : A.ι → A.ι → Prop) ((≤) : B.ι → B.ι → Prop),
+--     lt := _,
+--     le_refl := _,
+--     le_trans := _,
+--     lt_iff_le_not_le := _,
+--     le_antisymm := _,
+--     le_total := _,
+--     decidable_le := _,
+--     decidable_eq := _,
+--     decidable_lt := _,
+--     max := _,
+--     max_def := _,
+--     min := _,
+--     min_def := _ },
+--   wo := _,
+--   cover := λ i, sum.rec_on i A.cover B.cover,
+--   is_cover := sorry }
+
 instance : category_theory.small_category X.oc := 
 { hom := λ A B, refines A B,
   id := λ A, refines.refl A,
@@ -68,5 +111,20 @@ instance : category_theory.small_category X.oc :=
   id_comp' := λ A B f, by ext; refl,
   comp_id' := λ A B f, by ext; refl,
   assoc' := λ A B C D f g h, by ext; refl }
+
+-- instance : category_theory.is_filtered X.oc :=
+-- { cocone_objs := λ A B, sorry, -- common refinement
+--   cocone_maps := λ A B, sorry,
+--   /-
+--   A indexed by a
+--   B indexed by b
+--       f      
+--   A ------> B 
+--       g
+
+
+
+--   -/
+--   nonempty := ⟨default⟩ }
 
 end Top
