@@ -310,6 +310,11 @@ begin
   refl,
 end
 
+lemma aux2 (i j : ℕ) : colim.map (0 : Cech_Ab 𝓕 i ⟶ Cech_Ab 𝓕 j) = 0 := 
+begin
+  sorry
+end
+
 noncomputable def test : cochain_complex Ab.{u+1} ℕ :=
 { X := λ n, colim.obj (Cech_Ab 𝓕 n),
   d := λ i j, colim.map $ 
@@ -356,8 +361,7 @@ noncomputable def test : cochain_complex Ab.{u+1} ℕ :=
       rw [Cech_d_not_succ_down_apply, Cech.zero_apply],
       refl, 
       exact h,},
-    { ext x,
-      sorry },
+    { apply aux2, },
   end,
   d_comp_d' := λ i j k h1 h2, begin
     rw ← category_theory.functor.map_comp,
@@ -373,8 +377,7 @@ noncomputable def test : cochain_complex Ab.{u+1} ℕ :=
       subst h2,
       rw [category_theory.comp_apply, Cech_d_succ_down_apply, Cech_d_succ_down_apply],
       convert dd_pos_eq_zero _ _ _, },
-    { ext x,
-      sorry },
+    { apply aux2, },
   end }
 
 end
