@@ -6,6 +6,6 @@ test maths:
 
 <img src="https://render.githubusercontent.com/render/math?math=e^{i \pi} = -1">
 
-$$
+\[
 \sum_{i=0}^ni^2
-$$
+\]
