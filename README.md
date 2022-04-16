@@ -8,4 +8,4 @@ test maths:
 
 $$
 \sum_{i=0}^ni^2
-$$ 
+$$
