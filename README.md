@@ -2,9 +2,9 @@
 
 ## Open coverings
 
-Let $X$ be a topological space, an open covering for $X$ is a collection of open sets whose union is the whole $X$. In the case of Čech cohomology, we require the underlying set to be well ordered.
+Let $X$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be well ordered.
 
-Let $X$ be a topological space, an open covering for $X$ is a collection of open sets whose union is the whole $X$. In the case of Čech cohomology, we require the underlying set to be linearly ordered.
+Let $X$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be linearly ordered.
 In Lean we express this as
 
 ```lean
@@ -28,7 +28,7 @@ Then for two open covers $`\mathfrak A`$ and $`\mathfrak B`$ indexed by $`I`$ an
 (is_refinement : ∀ i : 𝔄.ι, 𝔄.cover i ≤ 𝔅.cover (func i))
 ```
 
-We temporarily fix the indexing set $ι$, then an $n$-simplex is simply a finite set of $ι$ with $n+1$ elements. In Lean, this is
+We temporarily fix the indexing set $`ι`$, then an $`n`$-simplex is simply a finite set of $`ι`$ with $`n+1`$ elements. In Lean, this is
 
 ```lean
 @[ext] structure simplex (n : ℕ) extends finset ι :=
