@@ -1,5 +1,7 @@
 import cech_d
 import algebra.homology.homological_complex
+import algebra.homology.homology
+import algebraic_geometry.sheafed_space
 import category_theory.opposites
 import oc
 import simplex
@@ -186,6 +188,20 @@ def C.refine_functor (n : ℕ) : X.ocᵒᵖ ⥤ Ab :=
 def Cech_Ab (n : ℕ) : X.ocᵒᵖ ⥤ Ab.{u+1} := 
 C.refine_functor 𝓕 n ⋙ AddCommGroup.ulift_functor.{u u+1}
 
+-- why do we need to lift up
+/-
+```
+include 𝓕
+
+example (n : ℕ) : true := 
+begin
+  have := @AddCommGroup.colimits.colimit X.ocᵒᵖ _ (C.refine_functor 𝓕 n),
+  -- this doesn't work, because we need a functor ` (X.oc)ᵒᵖ ⥤ AddCommGroup : Type (u+2)`,
+  -- but we only have `C.refine_functor 𝓕 n : (X.oc)ᵒᵖ ⥤ Ab : Type u+1`
+end
+```
+-/
+
 lemma Cech_Ab_obj (n : ℕ) (A : X.ocᵒᵖ) :
   (Cech_Ab 𝓕 n).obj A = AddCommGroup.ulift.{u u+1} (C 𝓕 A.unop n) := rfl
 
@@ -235,6 +251,7 @@ dif_pos rfl
 lemma Cech_d_not_succ (A : X.ocᵒᵖ) {i j : ℕ} (h : i + 1 ≠ j) :
   Cech_d 𝓕 A i j = 0 :=
 dif_neg h
+
 -- lemma to_succ (i : ℕ) :
 --   from_to 𝓕 𝔘 i i.succ = d_pos (nat.zero_lt_succ _) :=
 -- dif_pos rfl
@@ -301,6 +318,13 @@ def Cech_complex : X.ocᵒᵖ ⥤ cochain_complex Ab.{u+1} ℕ :=
     change _ = (C.refine 𝓕 i r1.unop ≫ C.refine 𝓕 i r2.unop) f.down σ,
     rw C.refine_comp,
   end }
+
+/-
+* ! lift up `X` and `𝓕`
+example : 
+  homological_complex.homology ((Cech_complex 𝓕).obj 𝔘) 0 ≅ 
+  algebraic_geometry.SheafedSpace.Γ.obj (op ⟨X, 𝓕⟩) := sorry
+-/
 
 lemma aux1 (i k : ℕ) (A : X.ocᵒᵖ) (σ : simplex (unop A) k) (f : (Cech_Ab 𝓕 i).obj A) : 
   ((0 : Cech_Ab 𝓕 i ⟶ Cech_Ab 𝓕 k).app A f).down σ = 0 :=

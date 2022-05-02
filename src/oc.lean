@@ -15,7 +15,7 @@ structure oc : Type (u+1) :=
 (cover : ι → opens X)
 (is_cover : supr cover = ⊤)
 
-attribute [instance] oc.lo -- oc.wo
+attribute [instance] oc.lo oc.wo
 attribute [simp] oc.is_cover
 
 instance (A : X.oc) [nonempty X] : nonempty A.ι :=
@@ -33,7 +33,6 @@ for all `i` in indexing set of `𝔄`, `𝔄ᵢ ⊆ 𝔅_{f i}`
 @[ext] structure refines (𝔄 𝔅 : X.oc) : Type (u+1) :=
 (func : 𝔄.ι → 𝔅.ι)
 (strict_mono : strict_mono func)
--- (is_inj : function.injective func)
 (is_refinement : ∀ i : 𝔄.ι, 𝔄.cover i ≤ 𝔅.cover (func i))
 
 def refines.refl (𝔄 : X.oc) : refines 𝔄 𝔄 :=
