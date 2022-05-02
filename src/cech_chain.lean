@@ -312,10 +312,13 @@ end
 
 lemma aux2 (i j : ℕ) : colim.map (0 : Cech_Ab 𝓕 i ⟶ Cech_Ab 𝓕 j) = 0 := 
 begin
-  sorry
+  apply colimit.hom_ext,
+  intros U,
+  ext x,
+  simp only [colimit.ι_map, nat_trans.app_zero, zero_comp, comp_zero],
 end
 
-noncomputable def test : cochain_complex Ab.{u+1} ℕ :=
+noncomputable def Cech_complex_colimit : cochain_complex Ab.{u+1} ℕ :=
 { X := λ n, colim.obj (Cech_Ab 𝓕 n),
   d := λ i j, colim.map $ 
   { app := λ A, Cech_d 𝓕 A i j,

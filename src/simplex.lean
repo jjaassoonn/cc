@@ -248,7 +248,7 @@ def refine (σ : simplex A n) : simplex B n :=
   card_eq := begin
     rw [← σ.2, finset.card_image_of_inj_on],
     apply function.injective.inj_on,
-    exact h.is_inj,
+    exact h.strict_mono.injective,
   end }
 
 lemma refine_self (σ : simplex A n) :
@@ -349,7 +349,7 @@ begin
       exact ⟨a, h1, rfl⟩, },
     { contrapose! h2,
       rw simplex.refine_nth at h2,
-      exact h.is_inj h2, } },
+      exact h.strict_mono.injective h2, } },
 end
 
 end refinement
