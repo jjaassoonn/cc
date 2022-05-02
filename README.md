@@ -19,7 +19,7 @@ attribute [instance] oc.lo oc.wo
 attribute [simp] oc.is_cover
 ```
 
-Then for two open covers $\mathfrak A$ and $\mathfrak B$ indexed by $I$ and $J$, respectively, we say $\mathfrak A$ refines $\mathfrak B$, if there is a strictly monotonic function $f : I \to J$ such that $\mathfrak A_i \subseteq \mathfrak B_{f(j)}$ for all $i ∈ I$. In Lean, this is
+Then for two open covers $`\mathfrak A`$ and $`\mathfrak B`$ indexed by $`I`$ and $`J`$, respectively, we say $`\mathfrak A`$ refines $`\mathfrak B`$, if there is a strictly monotonic function $`f : I \to J`$ such that $`\mathfrak A_i \subseteq \mathfrak B_{f(j)}`$ for all $`i ∈ I`$. In Lean, this is
 
 ``` lean
 @[ext] structure refines (𝔄 𝔅 : X.oc) : Type (u+1) :=
