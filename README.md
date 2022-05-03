@@ -2,7 +2,7 @@
 
 ## Open coverings
 
-Let $X$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be well ordered.
+Let $`X`$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be well ordered.
 
 Let $X$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be linearly ordered.
 In Lean we express this as

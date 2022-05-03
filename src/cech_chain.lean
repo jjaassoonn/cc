@@ -6,7 +6,9 @@ import category_theory.opposites
 import oc
 import simplex
 import algebra.category.Group.colimits
+import algebra.category.Group.limits
 import lemmas.ulift
+import topology.sheaves.sheaf_condition.unique_gluing
 
 section
 
@@ -319,12 +321,608 @@ def Cech_complex : X.ocᵒᵖ ⥤ cochain_complex Ab.{u+1} ℕ :=
     rw C.refine_comp,
   end }
 
-/-
-* ! lift up `X` and `𝓕`
-example : 
-  homological_complex.homology ((Cech_complex 𝓕).obj 𝔘) 0 ≅ 
-  algebraic_geometry.SheafedSpace.Γ.obj (op ⟨X, 𝓕⟩) := sorry
--/
+noncomputable def ex1 :
+  homological_complex.homology ((Cech_complex 𝓕).obj 𝔘) 0 ≅
+  kernel ((Cech_complex_obj 𝓕 𝔘).d 0 1) :=
+begin
+  refine homology_iso_cokernel_image_to_kernel' _ _ _ ≪≫ _,
+  change cokernel (kernel.lift _ _ _) ≅ _,
+
+  simp only [image.ι_zero', homological_complex.d_to_eq_zero, cochain_complex.prev_nat_zero, eq_self_iff_true, kernel.lift_zero, Cech_complex_obj_d, Cech_d_to_succ],
+  refine cokernel_zero_iso_target ≪≫ _,
+  refine AddCommGroup.kernel_iso_ker _ ≪≫ _,
+  refine _ ≪≫ (AddCommGroup.kernel_iso_ker (AddCommGroup.ulift_functor.map (d_pos _))).symm,
+  refine { hom := _, inv := _, hom_inv_id' := _, inv_hom_id' := _ },
+  { refine { to_fun := _, map_zero' := _, map_add' := _ },
+    { intros x,
+      refine ⟨x.1, _⟩,
+      rw add_monoid_hom.mem_ker,
+      have := x.2,
+      rw add_monoid_hom.mem_ker at this,
+      change homological_complex.d_from (Cech_complex_obj 𝓕 𝔘) 0 x.1 = _ at this,
+      have eq1 := homological_complex.d_from_eq (Cech_complex_obj 𝓕 𝔘) (show 1 = 0 + 1, from rfl),
+      erw Cech_complex_obj_d at eq1,
+      rw Cech_d_to_succ at eq1,
+      generalize_proofs h1 h2 at eq1,
+      have eq2 : homological_complex.d_from (Cech_complex_obj 𝓕 𝔘) 0 x.1 = (AddCommGroup.ulift_functor.map (d_pos h1) ≫ (homological_complex.X_next_iso (Cech_complex_obj 𝓕 𝔘) h2).inv) x.1,
+      { rw eq1, },
+      rw comp_apply at eq2,
+      rw this at eq2,
+      apply_fun (homological_complex.X_next_iso (Cech_complex_obj 𝓕 𝔘) h2).hom at eq2,
+      simp only [map_zero, coe_inv_hom_id] at eq2,
+      rw <- eq2 },
+    { rw subtype.ext_iff_val,
+      refl, },
+    { intros x1 x2, 
+      rw subtype.ext_iff_val,
+      refl, } },
+  { refine { to_fun := _, map_zero' := _, map_add' := _ },
+    { intros x,
+      refine ⟨x.1, _⟩,
+      have := x.2,
+      rw add_monoid_hom.mem_ker at this ⊢,
+      have eq1 := homological_complex.d_from_eq (Cech_complex_obj 𝓕 𝔘) (show 1 = 0 + 1, from rfl),
+      erw eq1,
+      rw comp_apply,
+      generalize_proofs h1 h2,
+      apply_fun (homological_complex.X_next_iso (Cech_complex_obj 𝓕 𝔘) h1).hom,
+      simp only [coe_inv_hom_id, map_zero],
+      convert this,
+      apply function.bijective.injective,
+      rw function.bijective_iff_has_inverse,
+      use (homological_complex.X_next_iso (Cech_complex_obj 𝓕 𝔘) h1).inv,
+      refine ⟨_, _⟩,
+      intros x,
+      rw coe_hom_inv_id,
+      intros x,
+      rw coe_inv_hom_id, },
+    { rw subtype.ext_iff_val,
+      refl },
+    { intros x y,
+      rw subtype.ext_iff_val,
+      refl, } },
+  { ext1 σ,
+    simp only [comp_apply, subtype.val_eq_coe, add_subgroup.coe_mk, add_monoid_hom.coe_mk, set_like.eta, id_apply] },
+  { ext1 σ,
+    simp only [comp_apply, subtype.val_eq_coe, add_subgroup.coe_mk, add_monoid_hom.coe_mk, set_like.eta, id_apply] },
+end
+
+noncomputable def ex2 : 
+  kernel ((Cech_complex_obj 𝓕 𝔘).d 0 1) ≅ 
+  kernel ((AddCommGroup.ulift_functor.{u u+1}).map (@d_pos X 𝓕 (unop 𝔘) _ (nat.zero_lt_succ 0))) :=
+  -- (AddCommGroup.ulift_functor.{u u+1}).obj (𝓕.1.obj (op ⊤)) := 
+begin
+  change kernel (Cech_d 𝓕 𝔘 0 1) ≅ _,
+  refine AddCommGroup.kernel_iso_ker _ ≪≫ _,
+  refine _ ≪≫ (AddCommGroup.kernel_iso_ker (AddCommGroup.ulift_functor.map (d_pos _))).symm,
+  
+  refine { hom := 𝟙 _, inv := 𝟙 _ },
+end
+
+noncomputable def ex3 :
+  kernel ((AddCommGroup.ulift_functor.{u u+1}).map (@d_pos X 𝓕 (unop 𝔘) _ (nat.zero_lt_succ 0))) ≅
+  (AddCommGroup.ulift_functor.{u u+1}).obj (kernel (@d_pos X 𝓕 (unop 𝔘) _ (nat.zero_lt_succ 0))) :=
+begin
+  apply AddCommGroup.ulift_kernel_iso_kernel_ulift,
+end
+
+lemma ex41.forward.aux1 {i j : 𝔘.unop.ι} {f : C 𝓕 𝔘.unop 0} (h : d_pos (nat.zero_lt_succ 0) f = 0) :
+  𝓕.1.map (((unop 𝔘).cover i).inf_le_left ((unop 𝔘).cover j) ≫ eq_to_hom begin
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {i}, card_eq := rfl}) = 
+  𝓕.1.map (hom_of_le begin
+    convert inf_le_left,
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {i}, card_eq := rfl}) :=
+begin
+  congr,
+end
+
+lemma ex41.forward.aux2 {i j : 𝔘.unop.ι} {f : C 𝓕 𝔘.unop 0} (h : d_pos (nat.zero_lt_succ 0) f = 0) :
+  𝓕.1.map (((unop 𝔘).cover i).inf_le_right ((unop 𝔘).cover j) ≫ eq_to_hom begin
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {j}, card_eq := rfl}) = 
+  𝓕.1.map (hom_of_le begin
+    convert inf_le_right,
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {j}, card_eq := rfl}) :=
+begin
+  congr,
+end
+
+lemma ex41.forward.aux3 {i j : 𝔘.unop.ι} (ineq : i < j) (f : C 𝓕 𝔘.unop 0) :
+  𝓕.1.map (simplex.der (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ ⟨0, nat.zero_lt_succ 1⟩).op 
+  (f (simplex.ignore (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ 0)) =
+  𝓕.1.map 
+  ((hom_of_le (λ p hp, begin
+    rw [opens.mem_coe] at hp ⊢,
+    change _ ∈ (infi _) at hp,
+    have := (infi_le (λ (i_1 : (unop 𝔘).ι), ⨅ (H : i_1 ∈ ({to_finset := {i, j}, card_eq := begin
+      rw finset.card_insert_of_not_mem,
+      refl,
+      rw [finset.mem_singleton],
+      intro r,
+      rw r at ineq,
+      exact lt_irrefl _ ineq,
+    end} : simplex _ 1).to_finset), (unop 𝔘).cover i_1)),
+    specialize this j,
+    dsimp only at this,
+    simp only [le_infi_iff] at this,
+    specialize this _,
+    { rw finset.mem_insert,
+      right,
+      exact finset.mem_singleton_self _ },
+    specialize this hp,
+    convert this,
+    unfold simplex.face,
+    { simp },
+  end) : 
+  ({to_finset := {i, j}, card_eq := begin
+     rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end} : simplex _ 1).face ⟶
+  ({to_finset := {j}, card_eq := begin
+    rw finset.card_singleton,
+  end} : simplex _ 0).face)).op 
+  (f ⟨{j}, rfl⟩) 
+  :=
+begin
+  generalize_proofs _ h1 h2 h3 h4 h5,
+  apply 𝓕_map_congr''',
+  unfold simplex.ignore,
+  dsimp only,
+  rw simplex.ext_iff,
+  dsimp only,
+  ext1 k,
+  split,
+  { intro hk,
+    rw finset.mem_erase_nth at hk,
+    rcases hk with ⟨hk1, hk2⟩,
+    rw [finset.mem_insert, finset.mem_singleton] at hk2,
+    rcases hk2 with rfl|rfl,
+    { rw finset.mem_singleton,
+      contrapose! hk1,
+      rw finset.order_emb_of_fin_zero,
+      rw finset.min'_insert,
+      rw finset.min'_singleton,
+      symmetry,
+      rw min_eq_right_iff,
+      refine le_of_lt ineq, },
+    { exact finset.mem_singleton_self _ }, },
+  { intro hk,
+    rw finset.mem_singleton at hk,
+    rw hk,
+    rw finset.mem_erase_nth,
+    split,
+    { intro rid,
+      rw finset.order_emb_of_fin_zero at rid,
+      rw finset.min'_insert at rid,
+      rw finset.min'_singleton at rid,
+      have ineq2 := min_le_right j i,
+      have ineq3 := min_le_left j i,
+      rw ← rid at ineq2,
+      rw lt_iff_not_ge at ineq,
+      apply ineq,
+      exact ineq2, },
+    { rw finset.mem_insert,
+      right,
+      exact finset.mem_singleton_self _, } },
+end
+
+
+lemma ex41.forward.aux4 {i j : 𝔘.unop.ι} (ineq : i < j) (f : C 𝓕 𝔘.unop 0) :
+  𝓕.1.map (simplex.der (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ ⟨1, lt_add_one 1⟩).op 
+  (f (simplex.ignore (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ 1)) =
+  𝓕.1.map 
+  ((hom_of_le (λ p hp, begin
+    rw [opens.mem_coe] at hp ⊢,
+    change _ ∈ (infi _) at hp,
+    have := (infi_le (λ (i_1 : (unop 𝔘).ι), ⨅ (H : i_1 ∈ ({to_finset := {i, j}, card_eq := begin
+      rw finset.card_insert_of_not_mem,
+      refl,
+      rw [finset.mem_singleton],
+      intro r,
+      rw r at ineq,
+      exact lt_irrefl _ ineq,
+    end} : simplex _ 1).to_finset), (unop 𝔘).cover i_1)),
+    specialize this i,
+    dsimp only at this,
+    simp only [le_infi_iff] at this,
+    specialize this _,
+    { rw finset.mem_insert,
+      left,
+      refl },
+    specialize this hp,
+    convert this,
+    unfold simplex.face,
+    { simp },
+  end) : 
+  ({to_finset := {i, j}, card_eq := begin
+     rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end} : simplex _ 1).face ⟶
+  ({to_finset := {i}, card_eq := begin
+    rw finset.card_singleton,
+  end} : simplex _ 0).face)).op 
+  (f ⟨{i}, rfl⟩) 
+  :=
+begin
+  generalize_proofs _ h1 h2 h3 h4 h5,
+  apply 𝓕_map_congr''',
+  unfold simplex.ignore,
+  dsimp only,
+  rw simplex.ext_iff,
+  dsimp only,
+  ext1 k,
+  split,
+  { intro hk,
+    rw finset.mem_erase_nth at hk,
+    rcases hk with ⟨hk1, hk2⟩,
+    rw [finset.mem_insert, finset.mem_singleton] at hk2,
+    rcases hk2 with rfl|rfl,
+    { rw finset.mem_singleton },
+    { rw finset.mem_singleton,
+      contrapose! hk1,
+      -- have := finset.order_emb_of_fin_last,
+      rw finset.order_emb_of_fin_last ({to_finset := {i, k}, card_eq := begin
+        rw [finset.card_insert_of_not_mem],
+        refl,
+        rw [finset.mem_singleton],
+        intro r,
+        rw r at ineq,
+        exact lt_irrefl _ ineq,
+      end} : simplex _ 1).card_eq,
+      rw finset.max'_insert,
+      rw finset.max'_singleton,
+      symmetry,
+      rw max_eq_left_iff,
+      refine le_of_lt ineq,
+      exact nat.zero_lt_succ _, }, },
+  { intro hk,
+    rw finset.mem_singleton at hk,
+    rw hk,
+    rw finset.mem_erase_nth,
+    split,
+    { intro rid,
+      subst hk,
+      rw finset.order_emb_of_fin_last ({to_finset := {k, j}, card_eq := begin
+        rw [finset.card_insert_of_not_mem],
+        refl,
+        rw [finset.mem_singleton],
+        intro r,
+        rw r at ineq,
+        exact lt_irrefl _ ineq,
+      end} : simplex _ 1).card_eq at rid,
+      dsimp only at rid,
+      generalize_proofs ne at rid,
+      have := finset.le_max' {k, j} j _,
+      erw ← rid at this,
+      rw lt_iff_not_ge at ineq,
+      apply ineq,
+      exact this,
+      rw finset.mem_insert,
+      right,
+      rw finset.mem_singleton,
+      exact nat.zero_lt_succ _, },
+    { rw finset.mem_insert,
+      left,
+      refl } },
+end
+
+lemma ex41.forward.aux5 (f : C 𝓕 𝔘.unop 0) 
+  (o1 o2 o3 o4 : opens X)
+  (oop2 : 𝓕.val.obj (op o2))
+  (oop3 : 𝓕.val.obj (op o3))
+-- o1 : face ij
+-- o2 : face i
+-- o3 : face j
+-- o4 : cover i ⊓ cover j
+  (h12 : o1 ≤ o2)
+  (h13 : o1 ≤ o3)
+  (h42 : o4 ≤ o2)
+  (h43 : o4 ≤ o3)
+  (h14 : o4 ≤ o1)
+  (eq1 : 𝓕.1.map (hom_of_le h12).op oop2 = 𝓕.1.map (hom_of_le h13).op oop3) : 
+  𝓕.1.map (hom_of_le h42).op oop2 = 𝓕.1.map (hom_of_le h43).op oop3 :=
+begin
+  have : hom_of_le h42 = hom_of_le h14 ≫ hom_of_le h12,
+  { ext, },
+  rw this,
+  have : hom_of_le h43 = hom_of_le h14 ≫ hom_of_le h13,
+  { ext },
+  rw this,
+  rw [op_comp, category_theory.functor.map_comp, op_comp, category_theory.functor.map_comp],
+  rw [comp_apply, comp_apply, eq1],
+end
+
+lemma ker_compatible (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zero_lt_succ 0))) : presheaf.is_compatible 𝓕.1 𝔘.unop.cover 
+  (λ i, begin
+    refine 𝓕.1.map (eq_to_hom _).op (f.1 ⟨{i}, rfl⟩),
+    unfold simplex.face,
+    simp,
+  end) :=
+begin
+  intros i j,
+      have := f.2,
+      rw add_monoid_hom.mem_ker at this,
+      
+      
+      rcases @trichotomous 𝔘.unop.ι (<) _ i j with ineq|ineq|ineq,
+      { dsimp only,
+        change (𝓕.1.map _ ≫ _) _ = (𝓕.1.map _ ≫ _) _,
+        rw [← category_theory.functor.map_comp, ← category_theory.functor.map_comp, ← op_comp, ← op_comp],
+        rw ex41.forward.aux1 _ _ this,
+        rw ex41.forward.aux2 _ _ this,
+
+        have eq1 : d_pos (nat.zero_lt_succ 0) f.1 ⟨{i, j}, begin
+          rw finset.card_insert_of_not_mem,
+          simp only [finset.card_singleton],
+          simp only [finset.mem_singleton],
+          intro r,
+          rw r at ineq,
+          exact lt_irrefl _ ineq,
+        end⟩ = 0,
+        { rw this, simp, },
+        simp only [d_pos_01] at eq1,
+        change _ - _ = _ at eq1,
+        rw sub_eq_zero at eq1,
+        dsimp only at eq1,
+        rw ex41.forward.aux3 at eq1,
+        have eq2 := eq.trans eq1 (ex41.forward.aux4 𝓕 𝔘 ineq f.1),
+        -- generalize_proofs at eq2,
+        -- have := 𝓕_map_congr''' 𝓕 f.1,
+        have : ({to_finset := {i, j}, card_eq := begin
+          rw [finset.card_insert_of_not_mem],
+          refl,
+          rw [finset.mem_singleton],
+          intro r,
+          rw r at ineq,
+          exact lt_irrefl _ ineq,
+        end} : simplex 𝔘.unop 1).face ≤ (unop 𝔘).cover i ⊓ (unop 𝔘).cover j,
+        { rw le_inf_iff,
+          split,
+          { sorry },
+          { sorry }, },
+          
+        refine ex41.forward.aux5 𝓕 𝔘 f.1 ({to_finset := {i, j}, card_eq := _} : simplex 𝔘.unop 1).face 
+          ({to_finset := {i}, card_eq := _} : simplex _ 0).face
+          ({to_finset := {j}, card_eq := _} : simplex _ 0).face
+          ((unop 𝔘).cover i ⊓ (unop 𝔘).cover j)
+          (f.val {to_finset := {i}, card_eq := _})
+          (f.val {to_finset := {j}, card_eq := _})
+          _ _ _ _ _ _,
+        { sorry },
+        { sorry },
+        { sorry },
+        { intros p hp,
+          unfold simplex.face,
+          rw [opens.mem_coe] at hp ⊢,
+          
+          sorry },
+        { symmetry,
+          exact eq2, }, },
+      { subst ineq, refl, },
+      { sorry },
+end
+
+lemma unique_gluing_prop (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zero_lt_succ 0))) :
+  ∃! (s : 𝓕.val.obj (op ⊤)),
+  ∀ (i : (unop 𝔘).ι),
+    (𝓕.val.map (hom_of_le le_top).op) s =
+    (𝓕.val.map (eq_to_hom (begin
+        unfold simplex.face,
+        simp,
+      end : (unop 𝔘).cover i = ({to_finset := {i}, card_eq := begin
+        rw finset.card_singleton,
+      end} : simplex _ 0).face)).op) (f.val {to_finset := {i}, card_eq := rfl}) :=
+begin
+  exact sheaf.exists_unique_gluing' 𝓕 𝔘.unop.cover ⊤ (λ i, hom_of_le le_top) begin
+      rw 𝔘.unop.is_cover,
+      exact le_refl _,
+    end (λ i, begin
+      refine 𝓕.1.map (eq_to_hom _).op (f.1 ⟨{i}, rfl⟩),
+      unfold simplex.face,
+      simp,
+    end) (ker_compatible 𝓕 𝔘 f),
+end
+
+noncomputable def unique_gluing (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zero_lt_succ 0))) :
+  𝓕.1.obj (op ⊤) :=
+classical.some (unique_gluing_prop _ _ f)
+
+lemma unique_gluing_is_glueing (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zero_lt_succ 0))) (i : 𝔘.unop.ι) :
+  𝓕.1.map (hom_of_le le_top).op (unique_gluing _ _ f) = 
+  𝓕.1.map (eq_to_hom (begin
+        unfold simplex.face,
+        simp,
+      end : (unop 𝔘).cover i = ({to_finset := {i}, card_eq := begin
+        rw finset.card_singleton,
+      end} : simplex _ 0).face)).op (f.1 ⟨{i}, rfl⟩) := 
+begin
+  have := classical.some_spec (unique_gluing_prop _ _ f),
+  dsimp only at this,
+  rcases this with ⟨h1, h2⟩,
+  exact h1 i,
+end
+
+lemma unique_gluing_is_unique (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zero_lt_succ 0))) (s : 𝓕.1.obj (op ⊤))
+  (is_glue : ∀ (i : 𝔘.unop.ι), 
+    𝓕.1.map (hom_of_le le_top).op s = 
+    𝓕.1.map (eq_to_hom (begin
+        unfold simplex.face,
+        simp,
+      end : (unop 𝔘).cover i = ({to_finset := {i}, card_eq := begin
+        rw finset.card_singleton,
+      end} : simplex _ 0).face)).op (f.1 ⟨{i}, rfl⟩)) :
+  (unique_gluing _ _ f) = s :=
+begin
+  have := classical.some_spec (unique_gluing_prop _ _ f),
+  dsimp only at this,
+  rcases this with ⟨h1, h2⟩,
+  symmetry,
+  apply h2,
+  assumption,
+end
+
+noncomputable def ex41.forward :
+  (AddCommGroup.of $ add_monoid_hom.ker (@d_pos X 𝓕 (unop 𝔘) _ (nat.zero_lt_succ 0))) ⟶
+  𝓕.1.obj (op ⊤) :=
+{ to_fun := λ f, unique_gluing _ _ f,
+  map_zero' := begin
+    apply unique_gluing_is_unique,
+    intros i,
+    simp,
+  end,
+  map_add' := λ f g, begin
+    apply unique_gluing_is_unique,
+    intros i,
+    rw map_add,
+    erw map_add,
+    congr;
+    apply unique_gluing_is_glueing,
+  end }
+
+lemma inj :
+  function.injective (ex41.forward 𝓕 𝔘) :=
+begin
+  intros f g h,
+  change unique_gluing _ _ f = unique_gluing _ _ g at h,
+  have h1 := unique_gluing_is_glueing _ _ f,
+  rw subtype.ext_iff_val,
+  ext σ,
+  have eq1 : ∃ i, σ.to_finset = {i},
+  { have := σ.card_eq,
+    simp only [nat.pred_succ] at this,
+    rwa finset.card_eq_one at this, },
+  rcases eq1 with ⟨i, hi⟩,
+  specialize h1 i,
+  
+  have h2 := unique_gluing_is_glueing _ _ g,
+  specialize h2 i,
+
+  rw [eq_to_hom_op, eq_to_hom_map] at h1 h2,
+  rw h at h1,
+  rw h1 at h2,
+
+  have eq2 : σ = ⟨{i}, rfl⟩,
+  { rw simplex.ext_iff, exact hi, },
+  rw eq2,
+  generalize_proofs _ _ h3 at h2,
+  suffices : function.injective (eq_to_hom h3),
+  apply this,
+  exact h2,
+
+  intros x y h,
+  apply_fun (eq_to_hom h3.symm) at h,
+  change (eq_to_hom h3 ≫ eq_to_hom h3.symm) x = (eq_to_hom h3 ≫ eq_to_hom h3.symm) y at h,
+  rw [eq_to_hom_trans, eq_to_hom_refl] at h_1,
+  simpa only using h_1,
+end
+
+lemma surj :
+  function.surjective (ex41.forward 𝓕 𝔘) :=
+begin
+  rw function.surjective_iff_has_right_inverse,
+  fconstructor,
+  { intros s,
+    refine ⟨λ σ, _, _⟩,
+    exact 𝓕.1.map (hom_of_le le_top).op s,
+    rw add_monoid_hom.mem_ker,
+    ext σ,
+    simp only [Cech.zero_apply],
+    rw d_pos_01,
+    change _ - _ = _,
+    rw sub_eq_zero,
+    dsimp only,
+    change (𝓕.1.map _ ≫ 𝓕.1.map _) _ = (𝓕.1.map _ ≫ 𝓕.1.map _) _,
+    suffices :
+      (𝓕.val.map ((simplex.der d0._proof_6 σ ⟨0, d0._proof_5⟩) ≫ (hom_of_le le_top)).op) s =
+      (𝓕.val.map ((simplex.der d0._proof_10 σ ⟨1, d0._proof_9⟩) ≫ (hom_of_le le_top)).op) s,
+    convert this,
+    rw op_comp,
+    rw 𝓕.1.map_comp,
+
+    rw op_comp,
+    rw 𝓕.1.map_comp,
+
+    apply 𝓕_map_congr',
+    refl, },
+  { intros s,
+    apply unique_gluing_is_unique,
+    intros i,
+    dsimp only,
+    change _ = (𝓕.1.map _ ≫ 𝓕.1.map _) _,
+    congr' 1,
+    rw ← 𝓕.1.map_comp,
+    rw ← op_comp,
+    congr' 1,
+  },
+end
+
+-- #check equiv.of_bijective (ex41.forward 𝓕 𝔘) ⟨inj _ _, surj _ _⟩
+noncomputable def ex41 :
+  (AddCommGroup.of $ add_monoid_hom.ker (@d_pos X 𝓕 (unop 𝔘) _ (nat.zero_lt_succ 0))) ≃+
+  𝓕.1.obj (op ⊤) :=
+add_equiv.of_bijective (ex41.forward _ _) ⟨inj _ _, surj _ _⟩
+
+noncomputable def ex4 :
+  homological_complex.homology ((Cech_complex 𝓕).obj 𝔘) 0 ≅
+  (AddCommGroup.ulift_functor.{u u+1}).obj (𝓕.1.obj (op ⊤)) :=
+begin
+  refine ex1 _ _ ≪≫ _,
+  refine ex2 _ _ ≪≫ _,
+  refine AddCommGroup.ulift_kernel_iso_kernel_ulift _ ≪≫ _,
+  apply AddCommGroup.ulift_iso,
+  refine AddCommGroup.kernel_iso_ker _ ≪≫ _,
+  refine { hom := _, inv := _, hom_inv_id' := _, inv_hom_id' := _ },
+  { exact (ex41 _ _).to_add_monoid_hom, },
+  { exact (ex41 _ _).symm.to_add_monoid_hom },
+  { ext1,
+    simp only [comp_apply, add_equiv.coe_to_add_monoid_hom, add_equiv.symm_apply_apply, id_apply], },
+  { ext1,
+    simp only [comp_apply, add_equiv.coe_to_add_monoid_hom, add_equiv.apply_symm_apply, id_apply]},
+end
+
 
 lemma aux1 (i k : ℕ) (A : X.ocᵒᵖ) (σ : simplex (unop A) k) (f : (Cech_Ab 𝓕 i).obj A) : 
   ((0 : Cech_Ab 𝓕 i ⟶ Cech_Ab 𝓕 k).app A f).down σ = 0 :=

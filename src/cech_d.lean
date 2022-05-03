@@ -1,4 +1,5 @@
 import topology.sheaves.sheaf
+import topology.sheaves.sheaf_condition.unique_gluing
 import sort
 import oc
 import lemmas.lemmas
@@ -104,8 +105,8 @@ section d0
 variables {𝓕 𝔘}
 def d0 : C 𝓕 𝔘 0 ⟶ C 𝓕 𝔘 1 :=
 { to_fun := λ f σ, 
-    𝓕.map (σ.subset₀ 0).op (f (simplex.zero_from 𝔘 (σ.nth 0))) - 
-    𝓕.map (σ.subset₀ 1).op (f (simplex.zero_from 𝔘 (σ.nth 1))),
+    𝓕.map (σ.der (nat.zero_lt_succ 0) ⟨0, _⟩).op (f (σ.ignore (nat.zero_lt_succ 0) 0)) - 
+    𝓕.map (σ.der (nat.zero_lt_succ 0) ⟨1, _⟩).op (f (σ.ignore (nat.zero_lt_succ 0) 1)),
   map_zero' := funext $ λ σ , begin
     rw [Cech.zero_apply, Cech.zero_apply, map_zero, map_zero, sub_zero, Cech.zero_apply],
   end,
@@ -172,6 +173,57 @@ begin
   rw [Cech.finset_sum_apply],
   refine finset.sum_congr rfl (λ m hm, _),
   refl,
+end
+
+lemma d_pos_01 : @d_pos X 𝓕 𝔘 1 (nat.zero_lt_succ 0) = d0 :=
+begin
+  ext f σ,
+  rw d_pos.def,
+  change _ = _ - _,
+  generalize_proofs h1 h2,
+  transitivity ∑ i in finset.attach {0, 1}, ite (even i.1) id has_neg.neg
+    (𝓕.map (σ.der h2 ⟨i.1, mem_range.mp i.2⟩).op (f (σ.ignore h2 ⟨i.1, mem_range.mp i.2⟩))),
+  { apply sum_congr,
+    refl,
+    intros x hx,
+    refl, },
+  { rw [finset.attach_insert, finset.sum_insert],
+    dsimp only,
+    rw [if_pos even_zero, id],
+    rw [finset.sum_image, sub_eq_add_neg],
+    apply congr_arg2 (+),
+    { refl, },
+    { dsimp only,
+      transitivity ∑ (i : ℕ) in {1}, - (𝓕.val.map (der h2 σ ⟨1, _x⟩).op) (f (ignore h2 σ 1)),
+      { conv_rhs { rw ← finset.sum_attach },
+        apply finset.sum_congr rfl,
+        rintros ⟨x, h⟩ hx,
+        rw mem_singleton at h,
+        rw if_neg,
+        dsimp only,
+        subst h,
+        refl,
+        subst h,
+        exact nat.not_even_one, },
+      rw finset.sum_singleton },
+    { rintros ⟨x, ⟨h1⟩⟩ trivial ⟨y, ⟨h2⟩⟩ trivial h3,
+      subst h1,
+      subst h2,
+      rw subtype.ext_iff_val at h3 ⊢,
+      exact h3,
+      
+      rw subtype.ext_iff_val at h3 ⊢,
+      exact h3,
+
+      rw subtype.ext_iff_val at h3 ⊢,
+      exact h3, },
+    { intros r,
+      rw finset.mem_image at r,
+      rcases r with ⟨x, h1, h2⟩,
+      have := x.2,
+      simp only [mem_singleton] at this,
+      simp only [this] at h2,
+      linarith, } },
 end
 
 abbreviation dd_pos {n : ℕ} (hn : 0 < n) (f : C 𝓕 𝔘 n.pred) : C 𝓕 𝔘 n.succ := d_pos (nat.zero_lt_succ _) (d_pos hn f)

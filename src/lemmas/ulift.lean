@@ -1,4 +1,5 @@
 import algebra.category.Group
+import category_theory.limits.shapes.kernels
 
 universes u v
 
@@ -95,5 +96,73 @@ def ulift_functor : Ab.{u} ⥤ Ab.{max u v} :=
 
 lemma ulift_functor_map_down {X Y : Ab.{u}} (h : X ⟶ Y) (x : X.ulift) :
   (ulift_functor.map h x).down = h x.down := rfl
+
+section
+
+open category_theory.limits
+
+def ulift_iso {X Y : Ab.{u}} (h : X ≅ Y) :
+  ulift_functor.obj X ≅ ulift_functor.obj Y :=
+{ hom := ulift_functor.map h.hom,
+  inv := ulift_functor.map h.inv,
+  hom_inv_id' := begin
+    rw [← category_theory.functor.map_comp],
+    simp only [category_theory.iso.hom_inv_id, category_theory.functor.map_id],
+  end,
+  inv_hom_id' := begin
+    rw [← category_theory.functor.map_comp],
+    simp only [category_theory.iso.inv_hom_id, category_theory.functor.map_id],
+  end }
+
+noncomputable def ulift_kernel_iso_kernel_ulift {X Y : Ab.{u}} (h : X ⟶ Y) :
+  kernel (ulift_functor.map h) ≅ ulift_functor.obj (kernel h) :=
+begin
+  refine kernel_iso_ker _ ≪≫ _,
+  refine _ ≪≫(ulift_iso (kernel_iso_ker h)).symm,
+  refine { hom := _, inv := _, hom_inv_id' := _, inv_hom_id' := _ },
+  { refine { to_fun := _, map_zero' := _, map_add' := _ },
+    { intros x,
+      refine up ⟨x.1.down, _⟩,
+      have := x.2,
+      rw add_monoid_hom.mem_ker at this ⊢,
+      apply_fun ulift.down at this,
+      rw ulift_functor_map_down at this,
+      exact this, },
+    { refl, },
+    { intros x y, 
+      apply_fun ulift.down,
+      dsimp only,
+      rw ulift.add_down,
+      simp only [subtype.val_eq_coe, add_subgroup.coe_add, ulift.add_down, add_submonoid.mk_add_mk, subtype.mk_eq_mk],
+      intros x y h,
+      ext1,
+      exact h, } },
+    { refine { to_fun := _, map_zero' := _, map_add' := _ },
+      { intros x,
+        refine ⟨up x.down.1, _⟩,
+        have := x.down.2,
+        rw add_monoid_hom.mem_ker at this ⊢,
+        ext,
+        rw ulift_functor_map_down,
+        exact this, },
+      { refl },
+      { intros x y,
+        rw subtype.ext_iff_val,
+        simp only [ulift.add_down],
+        refl, }, },
+    { ext1 x,
+      simp only [subtype.val_eq_coe, add_subgroup.coe_mk, category_theory.comp_apply, add_monoid_hom.coe_mk, category_theory.id_apply],
+      rw subtype.ext_iff_val,
+      dsimp only,
+      ext1,
+      refl, },
+    { ext1 x,
+      simp only [subtype.val_eq_coe, category_theory.comp_apply, add_monoid_hom.coe_mk, add_subgroup.coe_mk, set_like.eta,
+  category_theory.id_apply],
+      ext1,
+      refl, },
+end
+
+end
 
 end AddCommGroup
