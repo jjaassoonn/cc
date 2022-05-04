@@ -9,6 +9,7 @@ import algebra.category.Group.colimits
 import algebra.category.Group.limits
 import lemmas.ulift
 import topology.sheaves.sheaf_condition.unique_gluing
+import lemmas.about_opens
 
 section
 
@@ -420,6 +421,20 @@ begin
   congr,
 end
 
+lemma ex41.forward.aux1' {i j : 𝔘.unop.ι} {f : C 𝓕 𝔘.unop 0} (h : d_pos (nat.zero_lt_succ 0) f = 0) :
+  𝓕.1.map (((unop 𝔘).cover i).inf_le_right ((unop 𝔘).cover j) ≫ eq_to_hom begin
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {j}, card_eq := rfl}) = 
+  𝓕.1.map (hom_of_le begin
+    convert inf_le_right,
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {j}, card_eq := rfl}) :=
+begin
+  congr,
+end
+
 lemma ex41.forward.aux2 {i j : 𝔘.unop.ι} {f : C 𝓕 𝔘.unop 0} (h : d_pos (nat.zero_lt_succ 0) f = 0) :
   𝓕.1.map (((unop 𝔘).cover i).inf_le_right ((unop 𝔘).cover j) ≫ eq_to_hom begin
     unfold simplex.face,
@@ -430,6 +445,20 @@ lemma ex41.forward.aux2 {i j : 𝔘.unop.ι} {f : C 𝓕 𝔘.unop 0} (h : d_pos
     unfold simplex.face,
     simp
   end).op (f {to_finset := {j}, card_eq := rfl}) :=
+begin
+  congr,
+end
+
+lemma ex41.forward.aux2' {i j : 𝔘.unop.ι} {f : C 𝓕 𝔘.unop 0} (h : d_pos (nat.zero_lt_succ 0) f = 0) :
+  𝓕.1.map (((unop 𝔘).cover i).inf_le_left ((unop 𝔘).cover j) ≫ eq_to_hom begin
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {i}, card_eq := rfl}) = 
+  𝓕.1.map (hom_of_le begin
+    convert inf_le_left,
+    unfold simplex.face,
+    simp
+  end).op (f {to_finset := {i}, card_eq := rfl}) :=
 begin
   congr,
 end
@@ -531,6 +560,101 @@ begin
       exact finset.mem_singleton_self _, } },
 end
 
+lemma ex41.forward.aux3' {i j : 𝔘.unop.ι} (ineq : j < i) (f : C 𝓕 𝔘.unop 0) :
+  𝓕.1.map (simplex.der (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ ⟨0, nat.zero_lt_succ 1⟩).op 
+  (f (simplex.ignore (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ 0)) =
+  𝓕.1.map 
+  ((hom_of_le (λ p hp, begin
+    rw [opens.mem_coe] at hp ⊢,
+    change _ ∈ (infi _) at hp,
+    have := (infi_le (λ (i_1 : (unop 𝔘).ι), ⨅ (H : i_1 ∈ ({to_finset := {i, j}, card_eq := begin
+      rw finset.card_insert_of_not_mem,
+      refl,
+      rw [finset.mem_singleton],
+      intro r,
+      rw r at ineq,
+      exact lt_irrefl _ ineq,
+    end} : simplex _ 1).to_finset), (unop 𝔘).cover i_1)),
+    specialize this i,
+    dsimp only at this,
+    simp only [le_infi_iff] at this,
+    specialize this _,
+    { rw finset.mem_insert,
+      left,
+      refl, },
+    specialize this hp,
+    convert this,
+    unfold simplex.face,
+    { simp },
+  end) : 
+  ({to_finset := {i, j}, card_eq := begin
+     rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end} : simplex _ 1).face ⟶
+  ({to_finset := {i}, card_eq := begin
+    rw finset.card_singleton,
+  end} : simplex _ 0).face)).op 
+  (f ⟨{i}, rfl⟩) 
+  :=
+begin
+  generalize_proofs _ h1 h2 h3 h4 h5,
+  apply 𝓕_map_congr''',
+  unfold simplex.ignore,
+  dsimp only,
+  rw simplex.ext_iff,
+  dsimp only,
+  ext1 k,
+  split,
+  { intro hk,
+    rw finset.mem_erase_nth at hk,
+    rcases hk with ⟨hk1, hk2⟩,
+    rw [finset.mem_insert, finset.mem_singleton] at hk2,
+    rcases hk2 with rfl|rfl,
+    { rw finset.mem_singleton, },
+    { contrapose! hk1,
+      rw finset.order_emb_of_fin_zero,
+      rw finset.min'_insert,
+      rw finset.min'_singleton,
+      symmetry,
+      rw min_eq_left_iff,
+      refine le_of_lt ineq }, },
+  { intro hk,
+    rw finset.mem_singleton at hk,
+    rw hk,
+    rw finset.mem_erase_nth,
+    split,
+    { intro rid,
+      rw finset.order_emb_of_fin_zero at rid,
+      rw finset.min'_insert at rid,
+      rw finset.min'_singleton at rid,
+      have ineq2 := min_le_right j i,
+      have ineq3 := min_le_left j i,
+      rw ← rid at ineq3,
+      rw lt_iff_not_ge at ineq,
+      apply ineq,
+      exact ineq3, },
+    { rw finset.mem_insert,
+      left,
+      refl } },
+end
 
 lemma ex41.forward.aux4 {i j : 𝔘.unop.ι} (ineq : i < j) (f : C 𝓕 𝔘.unop 0) :
   𝓕.1.map (simplex.der (nat.zero_lt_succ 0) ⟨{i, j}, begin
@@ -649,6 +773,123 @@ begin
       refl } },
 end
 
+lemma ex41.forward.aux4' {i j : 𝔘.unop.ι} (ineq : j < i) (f : C 𝓕 𝔘.unop 0) :
+  𝓕.1.map (simplex.der (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ ⟨1, lt_add_one 1⟩).op 
+  (f (simplex.ignore (nat.zero_lt_succ 0) ⟨{i, j}, begin
+    rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end⟩ 1)) =
+  𝓕.1.map 
+  ((hom_of_le (λ p hp, begin
+    rw [opens.mem_coe] at hp ⊢,
+    change _ ∈ (infi _) at hp,
+    have := (infi_le (λ (i_1 : (unop 𝔘).ι), ⨅ (H : i_1 ∈ ({to_finset := {i, j}, card_eq := begin
+      rw finset.card_insert_of_not_mem,
+      refl,
+      rw [finset.mem_singleton],
+      intro r,
+      rw r at ineq,
+      exact lt_irrefl _ ineq,
+    end} : simplex _ 1).to_finset), (unop 𝔘).cover i_1)),
+    specialize this j,
+    dsimp only at this,
+    simp only [le_infi_iff] at this,
+    specialize this _,
+    { rw finset.mem_insert,
+      right,
+      rw finset.mem_singleton, },
+    specialize this hp,
+    convert this,
+    unfold simplex.face,
+    { simp },
+  end) : 
+  ({to_finset := {i, j}, card_eq := begin
+     rw [finset.card_insert_of_not_mem],
+    refl,
+    rw [finset.mem_singleton],
+    intro r,
+    rw r at ineq,
+    exact lt_irrefl _ ineq,
+  end} : simplex _ 1).face ⟶
+  ({to_finset := {j}, card_eq := begin
+    rw finset.card_singleton,
+  end} : simplex _ 0).face)).op 
+  (f ⟨{j}, rfl⟩) 
+  :=
+begin
+  generalize_proofs _ h1 h2 h3 h4 h5,
+  apply 𝓕_map_congr''',
+  unfold simplex.ignore,
+  dsimp only,
+  rw simplex.ext_iff,
+  dsimp only,
+  ext1 k,
+  split,
+  { intro hk,
+    rw finset.mem_erase_nth at hk,
+    rcases hk with ⟨hk1, hk2⟩,
+    rw [finset.mem_insert, finset.mem_singleton] at hk2,
+    rcases hk2 with rfl|rfl,
+    { rw finset.mem_singleton,
+      contrapose! hk1,
+      -- have := finset.order_emb_of_fin_last,
+      rw finset.order_emb_of_fin_last ({to_finset := {k, j}, card_eq := begin
+        rw [finset.card_insert_of_not_mem],
+        refl,
+        rw [finset.mem_singleton],
+        intro r,
+        rw r at ineq,
+        exact lt_irrefl _ ineq,
+      end} : simplex _ 1).card_eq,
+      rw finset.max'_insert,
+      rw finset.max'_singleton,
+      symmetry,
+      rw max_eq_right_iff,
+      refine le_of_lt ineq,
+      exact nat.zero_lt_succ _, },
+    { rw finset.mem_singleton }, },
+  { intro hk,
+    rw finset.mem_singleton at hk,
+    rw hk,
+    rw finset.mem_erase_nth,
+    split,
+    { intro rid,
+      subst hk,
+      rw finset.order_emb_of_fin_last ({to_finset := {i, k}, card_eq := begin
+        rw [finset.card_insert_of_not_mem],
+        refl,
+        rw [finset.mem_singleton],
+        intro r,
+        rw r at ineq,
+        exact lt_irrefl _ ineq,
+      end} : simplex _ 1).card_eq at rid,
+      dsimp only at rid,
+      generalize_proofs ne at rid,
+      have := finset.le_max' {i, k} i _,
+      erw ← rid at this,
+      rw lt_iff_not_ge at ineq,
+      apply ineq,
+      exact this,
+      rw finset.mem_insert,
+      left,
+      refl,
+      exact nat.zero_lt_succ _, },
+    { rw finset.mem_insert,
+      right,
+      rw finset.mem_singleton, } },
+end
+
 lemma ex41.forward.aux5 (f : C 𝓕 𝔘.unop 0) 
   (o1 o2 o3 o4 : opens X)
   (oop2 : 𝓕.val.obj (op o2))
@@ -683,66 +924,144 @@ lemma ker_compatible (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zer
   end) :=
 begin
   intros i j,
-      have := f.2,
-      rw add_monoid_hom.mem_ker at this,
+  have := f.2,
+  rw add_monoid_hom.mem_ker at this,
       
-      
-      rcases @trichotomous 𝔘.unop.ι (<) _ i j with ineq|ineq|ineq,
-      { dsimp only,
-        change (𝓕.1.map _ ≫ _) _ = (𝓕.1.map _ ≫ _) _,
-        rw [← category_theory.functor.map_comp, ← category_theory.functor.map_comp, ← op_comp, ← op_comp],
-        rw ex41.forward.aux1 _ _ this,
-        rw ex41.forward.aux2 _ _ this,
+  rcases @trichotomous 𝔘.unop.ι (<) _ i j with ineq|ineq|ineq,
+  { dsimp only,
+    change (𝓕.1.map _ ≫ _) _ = (𝓕.1.map _ ≫ _) _,
+    rw [← category_theory.functor.map_comp, ← category_theory.functor.map_comp, ← op_comp, ← op_comp],
+    rw ex41.forward.aux1 _ _ this,
+    rw ex41.forward.aux2 _ _ this,
 
-        have eq1 : d_pos (nat.zero_lt_succ 0) f.1 ⟨{i, j}, begin
-          rw finset.card_insert_of_not_mem,
-          simp only [finset.card_singleton],
-          simp only [finset.mem_singleton],
-          intro r,
-          rw r at ineq,
-          exact lt_irrefl _ ineq,
-        end⟩ = 0,
-        { rw this, simp, },
-        simp only [d_pos_01] at eq1,
-        change _ - _ = _ at eq1,
-        rw sub_eq_zero at eq1,
-        dsimp only at eq1,
-        rw ex41.forward.aux3 at eq1,
-        have eq2 := eq.trans eq1 (ex41.forward.aux4 𝓕 𝔘 ineq f.1),
-        -- generalize_proofs at eq2,
-        -- have := 𝓕_map_congr''' 𝓕 f.1,
-        have : ({to_finset := {i, j}, card_eq := begin
-          rw [finset.card_insert_of_not_mem],
-          refl,
-          rw [finset.mem_singleton],
-          intro r,
-          rw r at ineq,
-          exact lt_irrefl _ ineq,
-        end} : simplex 𝔘.unop 1).face ≤ (unop 𝔘).cover i ⊓ (unop 𝔘).cover j,
-        { rw le_inf_iff,
-          split,
-          { sorry },
-          { sorry }, },
+    have eq1 : d_pos (nat.zero_lt_succ 0) f.1 ⟨{i, j}, begin
+      rw finset.card_insert_of_not_mem,
+      simp only [finset.card_singleton],
+      simp only [finset.mem_singleton],
+      intro r,
+      rw r at ineq,
+      exact lt_irrefl _ ineq,
+    end⟩ = 0,
+    { rw this, simp, },
+    simp only [d_pos_01] at eq1,
+    change _ - _ = _ at eq1,
+    rw sub_eq_zero at eq1,
+    dsimp only at eq1,
+    rw ex41.forward.aux3 at eq1,
+    have eq2 := eq.trans eq1 (ex41.forward.aux4 𝓕 𝔘 ineq f.1),
           
-        refine ex41.forward.aux5 𝓕 𝔘 f.1 ({to_finset := {i, j}, card_eq := _} : simplex 𝔘.unop 1).face 
-          ({to_finset := {i}, card_eq := _} : simplex _ 0).face
-          ({to_finset := {j}, card_eq := _} : simplex _ 0).face
-          ((unop 𝔘).cover i ⊓ (unop 𝔘).cover j)
-          (f.val {to_finset := {i}, card_eq := _})
-          (f.val {to_finset := {j}, card_eq := _})
-          _ _ _ _ _ _,
-        { sorry },
-        { sorry },
-        { sorry },
-        { intros p hp,
-          unfold simplex.face,
-          rw [opens.mem_coe] at hp ⊢,
-          
-          sorry },
-        { symmetry,
-          exact eq2, }, },
-      { subst ineq, refl, },
-      { sorry },
+    refine ex41.forward.aux5 𝓕 𝔘 f.1 ({to_finset := {i, j}, card_eq := _} : simplex 𝔘.unop 1).face 
+      ({to_finset := {i}, card_eq := _} : simplex _ 0).face
+      ({to_finset := {j}, card_eq := _} : simplex _ 0).face
+      ((unop 𝔘).cover i ⊓ (unop 𝔘).cover j)
+      (f.val {to_finset := {i}, card_eq := _})
+      (f.val {to_finset := {j}, card_eq := _})
+      _ _ _ _ _ _,
+    { rw finset.card_insert_of_not_mem,
+      refl,
+      rw finset.mem_singleton,
+      intro r,
+      subst r,
+      apply lt_irrefl i ineq, },
+    { unfold simplex.face,
+      intros p hp,
+      erw opens.finset_infi at hp ⊢,
+      intros k hk,
+      apply hp,
+      dsimp only at hk ⊢,
+      rw [finset.mem_insert, finset.mem_singleton],
+      left,
+      simpa using hk, },
+    { unfold simplex.face,
+      intros p hp,
+      erw opens.finset_infi at hp ⊢,
+      intros k hk,
+      apply hp,
+      dsimp only at hk ⊢,
+      rw [finset.mem_insert, finset.mem_singleton],
+      right,
+      simpa using hk, },
+    { intros p hp,
+      unfold simplex.face,
+      rw [opens.mem_coe] at hp ⊢,
+      rw opens.finset_infi,
+      intros h hk,
+      dsimp only at hk,
+      rw [finset.mem_insert, finset.mem_singleton] at hk,
+      rw ← opens.inter_eq at hp,
+      rcases hp with ⟨hp1, hp2⟩,
+      rcases hk with rfl|rfl,
+      { exact hp1, },
+      { exact hp2, }, },
+    { symmetry,
+      exact eq2, }, },
+  { subst ineq, refl, },
+  { dsimp only,
+    change (𝓕.1.map _ ≫ _) _ = (𝓕.1.map _ ≫ _) _,
+    rw [← category_theory.functor.map_comp, ← category_theory.functor.map_comp, ← op_comp, ← op_comp],
+    rw ex41.forward.aux1' _ _ this,
+    rw ex41.forward.aux2' _ _ this,
+
+    have eq1 : d_pos (nat.zero_lt_succ 0) f.1 ⟨{i, j}, begin
+      rw finset.card_insert_of_not_mem,
+      simp only [finset.card_singleton],
+      simp only [finset.mem_singleton],
+      intro r,
+      rw r at ineq,
+      exact lt_irrefl _ ineq,
+    end⟩ = 0,
+    { rw this, simp, },
+    simp only [d_pos_01] at eq1,
+    change _ - _ = _ at eq1,
+    rw sub_eq_zero at eq1,
+    dsimp only at eq1,
+    rw ex41.forward.aux3' at eq1,
+    have eq2 := eq.trans eq1 (ex41.forward.aux4' 𝓕 𝔘 ineq f.1),
+
+    refine ex41.forward.aux5 𝓕 𝔘 f.1 ({to_finset := {i, j}, card_eq := _} : simplex 𝔘.unop 1).face 
+      ({to_finset := {i}, card_eq := _} : simplex _ 0).face
+      ({to_finset := {j}, card_eq := _} : simplex _ 0).face
+      ((unop 𝔘).cover i ⊓ (unop 𝔘).cover j)
+      (f.val {to_finset := {i}, card_eq := _})
+      (f.val {to_finset := {j}, card_eq := _})
+      _ _ _ _ _ _,
+    { rw finset.card_insert_of_not_mem,
+      refl,
+      rw finset.mem_singleton,
+      intro r,
+      subst r,
+      apply lt_irrefl i ineq, },
+    { unfold simplex.face,
+      intros p hp,
+      erw opens.finset_infi at hp ⊢,
+      intros k hk,
+      apply hp,
+      dsimp only at hk ⊢,
+      rw [finset.mem_insert, finset.mem_singleton],
+      left,
+      simpa using hk, },
+    { unfold simplex.face,
+      intros p hp,
+      erw opens.finset_infi at hp ⊢,
+      intros k hk,
+      apply hp,
+      dsimp only at hk ⊢,
+      rw [finset.mem_insert, finset.mem_singleton],
+      right,
+      simpa using hk, },
+    { intros p hp,
+      unfold simplex.face,
+      rw [opens.mem_coe] at hp ⊢,
+      rw opens.finset_infi,
+      intros h hk,
+      dsimp only at hk,
+      rw [finset.mem_insert, finset.mem_singleton] at hk,
+      rw ← opens.inter_eq at hp,
+      rcases hp with ⟨hp1, hp2⟩,
+      rcases hk with rfl|rfl,
+      { exact hp1, },
+      { exact hp2, }, },
+    { exact eq2, } },
 end
 
 lemma unique_gluing_prop (f : add_monoid_hom.ker (@d_pos X 𝓕 𝔘.unop 1 (nat.zero_lt_succ 0))) :
