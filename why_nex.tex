@@ -1,0 +1,41 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{tikz-cd}
+
+
+\begin{document}
+Let $U=\{U_0, U_1, U_2, U_3\}$ be an open covering indexed by $I$ and $V=\{V_0, V_1\}$ be another open covering indexed by $J$. Say $U$ refines $V$ by
+\begin{equation*}
+\begin{aligned}
+  U_0 &\subseteq V_1, & U_1&\subseteq V_0\\
+  U_2 &\subseteq V_1, & U_3&\subseteq V_0,
+\end{aligned}
+\end{equation*}
+call this refinement $\tau$.
+
+Consider the diagram
+\begin{equation*}
+\begin{tikzcd}
+  C(U, 0) \arrow[r, "d"]                   & C(U, 1) \\
+  C(V, 0) \arrow[r, "d"] \arrow[u, "\tau"] & C(V, 1) \arrow[u, "\tau"],
+\end{tikzcd}
+\end{equation*}
+where $\tau$ stands for the refinement map
+$$
+\tau(f)({i_0,\dots,i_p})=f(\tau(i_0),\dots,\tau(i_p))\mid_{U_{i_0}\cap\dots\cap U_{i_p}}.
+$$
+Let $f\in C(V, 0)$, then $\tau d f\in C(U, 1)$, then
+\begin{equation*}
+\begin{aligned}
+  \tau d f\{0,3\} &= d f\{0,1\}\mid_{U_0\cap U_3}\\
+                  &= \left(f\{1\}\mid_{V_0\cap V_1}\right)\mid_{U_0\cap U_3} - 
+                     \left(f\{0\}\mid_{V_0\cap V_1}\right)\mid_{U_0\cap U_3} \\
+                  &= f\{1\}\mid_{U_0\cap U_3} - f\{0\}\mid_{U_0\cap U_3}, \\
+  d\tau f\{0,3\}  &= \tau f\{3\}\mid_{V_0\cap V_3} -\tau f\{0\}\mid_{V_0\cap V_3}\\
+                  &= \left(f\{0\}\mid_{U_0}\right)\mid_{V_0\cap V_3} -
+                     \left(f\{1\}\mid_{U_0}\right)\mid_{V_0\cap V_3}.
+\end{aligned}
+\end{equation*}
+They have different signs!
+\end{document}

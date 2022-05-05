@@ -2,6 +2,9 @@ import topology.sheaves.sheaf
 import algebra.category.Group.limits
 import oc
 import lemmas.about_opens
+import group_theory.perm.sign
+
+noncomputable theory
 
 section
 
@@ -15,6 +18,48 @@ variables {X : Top.{u}} (𝓕 : sheaf Ab X) (U : X.oc)
 section
 
 variables {U}
+
+@[derive [decidable_eq]]
+inductive sign
+| neg
+| zero
+| pos
+
+def unit_to_sign (n : ℤˣ) : sign :=
+if n = 1 then sign.pos else sign.neg
+
+def signature.order_aux {n : ℕ} {α : fin n → U.ι} (inj : function.injective α) :
+  fin n ≃o finset.image α finset.univ :=
+finset.order_iso_of_fin _ begin
+  rw finset.card_image_of_injective _ inj,
+  exact finset.card_fin n,
+end
+
+def signature.restrict_aux {n : ℕ} {α : fin n → U.ι} (inj : function.injective α) :
+  fin n ≃ finset.image α finset.univ :=
+equiv.of_bijective (λ k, ⟨α k, finset.mem_image.mpr ⟨k, finset.mem_univ _, rfl⟩⟩) begin
+  split,
+  { intros a b h,
+    simp only [subtype.mk_eq_mk] at h,
+    apply_fun α,
+    exact h, },
+  { rintros ⟨i, hi⟩,
+    rw finset.mem_image at hi,
+    rcases hi with ⟨j, _, rfl⟩,
+    use j, }
+end
+
+def signature.equiv {n : ℕ} {α : fin n → U.ι} (inj : function.injective α) :
+  fin n ≃ fin n :=
+{ to_fun := function.comp (signature.order_aux inj).symm (signature.restrict_aux inj),
+  inv_fun := function.comp (signature.restrict_aux inj).symm (signature.order_aux inj),
+  left_inv := λ k, by simp,
+  right_inv := λ k, by simp }
+
+def signature {n : ℕ} (α : fin n → U.ι) : sign :=
+dite (function.injective α)
+(λ inj, unit_to_sign $ equiv.perm.sign (signature.equiv inj))
+(λ _, sign.zero)
 
 def swap {n : ℕ} (i j : fin n) (α : fin n → U.ι) : fin n → U.ι :=
 λ k, if (k = i) 
