@@ -32,19 +32,19 @@ for all `i` in indexing set of `𝔄`, `𝔄ᵢ ⊆ 𝔅_{f i}`
 -/
 @[ext] structure refines (𝔄 𝔅 : X.oc) : Type (u+1) :=
 (func : 𝔄.ι → 𝔅.ι)
-(strict_mono : strict_mono func)
+-- (strict_mono : strict_mono func)
 (is_refinement : ∀ i : 𝔄.ι, 𝔄.cover i ≤ 𝔅.cover (func i))
 
 def refines.refl (𝔄 : X.oc) : refines 𝔄 𝔄 :=
 { func := id,
-  strict_mono := strict_mono_id,
+  -- strict_mono := strict_mono_id,
   -- is_inj := function.injective_id,
   is_refinement := λ i, le_refl _ }
 
 def refines.trans {𝔄 𝔅 ℭ : X.oc} (r1 : refines 𝔄 𝔅) (r2 : refines 𝔅 ℭ) : refines 𝔄 ℭ :=
 { func := r2.func ∘ r1.func,
   -- is_inj := function.injective.comp (r2.is_inj) (r1.is_inj),
-  strict_mono := strict_mono.comp (r2.strict_mono) (r1.strict_mono),
+  -- strict_mono := strict_mono.comp (r2.strict_mono) (r1.strict_mono),
   is_refinement := λ i, le_trans (r1.is_refinement i) (r2.is_refinement $ r1.func i) }
 
 -- instance : has_le X.oc :=
@@ -83,7 +83,7 @@ instance : inhabited X.oc :=
 --   lt_iff_le_not_le := λ _ _, ⟨id, id⟩ }
 
 -- def common_refinement (A B : X.oc) : X.oc :=
--- { ι := A.ι ⊕ B.ι,
+-- { ι := A.ι ⊗ B.ι,
 --   lo := 
 --   { le := sum.lex ((≤) : A.ι → A.ι → Prop) ((≤) : B.ι → B.ι → Prop),
 --     lt := _,
@@ -111,17 +111,17 @@ instance : category_theory.small_category X.oc :=
   comp_id' := λ A B f, by ext; refl,
   assoc' := λ A B C D f g h, by ext; refl }
 
--- instance : category_theory.is_filtered X.oc :=
+-- instance : category_theory.is_cofiltered X.oc :=
 -- { cocone_objs := λ A B, sorry, -- common refinement
 --   cocone_maps := λ A B, sorry,
 --   /-
 --   A indexed by a
 --   B indexed by b
---       f      
---   A ------> B 
---       g
+--                   f             
+--   W -------> A ========> B 
+--                   g
 
-
+--   such that f ≫ h = g ≫ h
 
 --   -/
 --   nonempty := ⟨default⟩ }

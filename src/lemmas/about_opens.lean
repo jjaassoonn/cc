@@ -42,4 +42,37 @@ begin
         exact finset.mem_insert_of_mem hj, }, }, },
 end
 
+lemma opens.fintype_infi_aux {ι : Type*} [h : fintype ι] {X : Top} (f : ι -> opens X) :
+  infi f = ⨅ (i ∈ h.elems), f i :=
+begin
+  have h2 := h.2,
+  refine le_antisymm _ _,
+  { rw infi_le_iff,
+    intros u h3,
+    simp only [le_infi₂_iff],
+    intros i hi,
+    apply h3, },
+  { rw infi_le_iff,
+    intros i hi,
+    simp only [le_infi_iff],
+    intros j,
+    specialize hi j,
+    rw le_infi_iff at hi,
+    apply hi,
+    apply h.2 },
+end
+
+lemma opens.fintype_infi {ι : Type*} [fintype ι] {X : Top} (f : ι -> opens X) (x : X) :
+  x ∈ infi f ↔ ∀ i : ι, x ∈ f i :=
+begin
+  rw opens.fintype_infi_aux,
+  rw opens.finset_infi,
+  split,
+  { intros hi i,
+    apply hi,
+    exact fintype.complete i, },
+  { intros hi i _,
+    apply hi, },
+end
+
 end

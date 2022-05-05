@@ -241,116 +241,94 @@ der (nat.zero_lt_succ _) σ m ≫ der _ (σ.ignore _ m) m'
 
 section refinement
 
-variables {A B : X.oc} (h : A ⟶ B)
+variables {A B : X.oc} (h : A ⟶ B) (inj : function.injective h.func)
 
+include inj
 def refine (σ : simplex A n) : simplex B n :=
 { to_finset := finset.image h.func σ.to_finset,
   card_eq := begin
     rw [← σ.2, finset.card_image_of_inj_on],
     apply function.injective.inj_on,
-    exact h.strict_mono.injective,
+    assumption,
   end }
 
-lemma refine_self (σ : simplex A n) :
-  σ.refine (𝟙 A) = σ :=
-begin
-  ext i,
-  split,
-  { intros hi,
-    unfold simplex.refine at hi,
-    dsimp only at hi,
-    change i ∈ finset.image id _ at hi,
-    rw finset.mem_image at hi,
-    rcases hi with ⟨a, ha, rfl⟩,
-    exact ha },
-  { intros hi,
-    unfold simplex.refine,
-    dsimp only,
-    change i ∈ finset.image id _,
-    rw finset.mem_image,
-    refine ⟨i, hi, rfl⟩, },
-end
+-- lemma refine_self (σ : simplex A n) :
+--   σ.refine (𝟙 A) = σ :=
+-- begin
+--   ext i,
+--   split,
+--   { intros hi,
+--     unfold simplex.refine at hi,
+--     dsimp only at hi,
+--     change i ∈ finset.image id _ at hi,
+--     rw finset.mem_image at hi,
+--     rcases hi with ⟨a, ha, rfl⟩,
+--     exact ha },
+--   { intros hi,
+--     unfold simplex.refine,
+--     dsimp only,
+--     change i ∈ finset.image id _,
+--     rw finset.mem_image,
+--     refine ⟨i, hi, rfl⟩, },
+-- end
 
-lemma refine_nth (σ : simplex A n) (m : fin n.succ) :
-  (σ.refine h).nth m = h.func (σ.nth m) := 
-begin
-  change _ = (h.func ∘ σ.nth) m,
-  symmetry,
-  unfold simplex.nth,
-  apply congr_fun,
-  apply finset.order_emb_of_fin_unique (σ.refine h).2,
-  { intros i,
-    change h.func (σ.nth i) ∈ _,
-    unfold simplex.refine,
-    dsimp only,
-    rw finset.mem_image,
-    refine ⟨σ.nth i, _, rfl⟩,
-    apply σ.nth_mem },
-  { intros i j hh,
-    change h.func (σ.nth i) < h.func (σ.nth j),
-    apply h.strict_mono,
-    unfold simplex.nth,
-    apply (σ.to_finset.order_emb_of_fin σ.2).strict_mono,
-    assumption }
-end
+-- lemma refine_comp {n : ℕ} {A B D : X.oc} (r1 : A ⟶ B) (r2 : B ⟶ D) (σ : simplex A n) :
+--   σ.refine (r1 ≫ r2) = (σ.refine r1).refine r2 :=
+-- begin
+--   ext d,
+--   split;
+--   intros hd;
+--   unfold simplex.refine at hd ⊢;
+--   dsimp only at hd ⊢;
+--   rw finset.mem_image at hd ⊢,
+--   { rcases hd with ⟨a, ha, rfl⟩,
+--     refine ⟨r1.func a, _, rfl⟩,
+--     rw finset.mem_image,
+--     exact ⟨a, ha, rfl⟩, },
+--   { rcases hd with ⟨b, hb, rfl⟩, 
+--     rw finset.mem_image at hb,
+--     rcases hb with ⟨a, ha, rfl⟩,
+--     exact ⟨a, ha, rfl⟩, },
+-- end
 
-lemma refine_comp {n : ℕ} {A B D : X.oc} (r1 : A ⟶ B) (r2 : B ⟶ D) (σ : simplex A n) :
-  σ.refine (r1 ≫ r2) = (σ.refine r1).refine r2 :=
-begin
-  ext d,
-  split;
-  intros hd;
-  unfold simplex.refine at hd ⊢;
-  dsimp only at hd ⊢;
-  rw finset.mem_image at hd ⊢,
-  { rcases hd with ⟨a, ha, rfl⟩,
-    refine ⟨r1.func a, _, rfl⟩,
-    rw finset.mem_image,
-    exact ⟨a, ha, rfl⟩, },
-  { rcases hd with ⟨b, hb, rfl⟩, 
-    rw finset.mem_image at hb,
-    rcases hb with ⟨a, ha, rfl⟩,
-    exact ⟨a, ha, rfl⟩, },
-end
-
-lemma refine_ignore {n : ℕ} (hn : 0 < n) {A B : oc X} (h : A ⟶ B) (σ : simplex A n) (m : fin n.succ) : 
-  (σ.refine h).ignore hn m = (σ.ignore hn m).refine h := 
-begin
-  ext i,
-  split,
-  { rintros (hi : i ∈ simplex.ignore hn (simplex.refine h σ) m),
-    rw simplex.mem_ignore at hi, 
-    rcases hi with ⟨h1, h2⟩,
-    change _ ∈ simplex.to_finset _ at h1,
-    unfold simplex.refine at h1 ⊢,
-    dsimp only at h1 ⊢,
-    rw finset.mem_image at h1 ⊢,
-    rcases h1 with ⟨a, ha, rfl⟩,
-    refine ⟨a, _, rfl⟩,
-    change a ∈ simplex.ignore hn σ m,
-    rw simplex.mem_ignore,
-    refine ⟨ha, _⟩,
-    contrapose! h2,
-    rw [simplex.refine_nth, h2] },
-  { rintros hi,
-    erw simplex.mem_ignore,
-    change i ∈ simplex.to_finset _ ∧ _,
-    unfold simplex.refine at hi,
-    dsimp only at hi,
-    rw finset.mem_image at hi,
-    rcases hi with ⟨a, ha, rfl⟩,
-    erw simplex.mem_ignore at ha,
-    rcases ha with ⟨h1, h2⟩,
-    refine ⟨_, _⟩,
-    { change _ ∈ simplex.to_finset _,
-      unfold simplex.refine,
-      dsimp only,
-      rw finset.mem_image,
-      exact ⟨a, h1, rfl⟩, },
-    { contrapose! h2,
-      rw simplex.refine_nth at h2,
-      exact h.strict_mono.injective h2, } },
-end
+-- lemma refine_ignore {n : ℕ} (hn : 0 < n) {A B : oc X} (h : A ⟶ B) (inj : function.injective h.func) (σ : simplex A n) (m : fin n.succ) : 
+--   (σ.refine h inj).ignore hn m = (σ.ignore hn m).refine h inj := 
+-- begin
+--   ext i,
+--   split,
+--   { rintros (hi : i ∈ simplex.ignore hn (simplex.refine h inj σ) m),
+--     rw simplex.mem_ignore at hi, 
+--     rcases hi with ⟨h1, h2⟩,
+--     change _ ∈ simplex.to_finset _ at h1,
+--     unfold simplex.refine at h1 ⊢,
+--     dsimp only at h1 ⊢,
+--     rw finset.mem_image at h1 ⊢,
+--     rcases h1 with ⟨a, ha, rfl⟩,
+--     refine ⟨a, _, rfl⟩,
+--     change a ∈ simplex.ignore hn σ m,
+--     rw simplex.mem_ignore,
+--     refine ⟨ha, _⟩,
+--     contrapose! h2,
+--     rw [simplex.refine_nth, h2] },
+--   { rintros hi,
+--     erw simplex.mem_ignore,
+--     change i ∈ simplex.to_finset _ ∧ _,
+--     unfold simplex.refine at hi,
+--     dsimp only at hi,
+--     rw finset.mem_image at hi,
+--     rcases hi with ⟨a, ha, rfl⟩,
+--     erw simplex.mem_ignore at ha,
+--     rcases ha with ⟨h1, h2⟩,
+--     refine ⟨_, _⟩,
+--     { change _ ∈ simplex.to_finset _,
+--       unfold simplex.refine,
+--       dsimp only,
+--       rw finset.mem_image,
+--       exact ⟨a, h1, rfl⟩, },
+--     { contrapose! h2,
+--       rw simplex.refine_nth at h2,
+--       exact h.strict_mono.injective h2, } },
+-- end
 
 end refinement
 
