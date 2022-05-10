@@ -76,7 +76,7 @@ lemma ignore₂_symm {n : ℕ} (α : fin (n + 2) → U.ι)
   (h : i.1 ≤ j.1) :
   ignore₂ α ⟨j.1 + 1, nat.succ_lt_succ_iff.mpr j.2⟩ ⟨i.1, lt_of_le_of_lt h j.2⟩ = ignore₂ α i j :=
 begin
-  sorry
+  admit
 end
 
 lemma ignore₂_symm' {n : ℕ} (α : fin (n + 2) → U.ι)
@@ -88,8 +88,29 @@ lemma ignore₂_symm' {n : ℕ} (α : fin (n + 2) → U.ι)
     exact hj.2
   end⟩ ⟨i, finset.mem_range.mp hi⟩ = ignore₂ α ⟨i, lt_trans (finset.mem_range.mp hi) (lt_add_one _)⟩ ⟨j, (finset.mem_Ico.mp hj).2⟩ :=
 begin
-  convert ignore₂_symm α i j _;
-  sorry
+  rw finset.mem_Ico at hj,
+  rw finset.mem_range at hi,
+  
+  convert ignore₂_symm α i j _,
+  rw fin.coe_val_of_lt,
+  exact hj.2,
+
+  rw fin.coe_val_of_lt,
+  refine lt_trans hi (lt_add_one _),
+
+  rw subtype.ext_iff_val,
+  rw fin.coe_val_of_lt,
+  refine lt_trans hi (lt_add_one _),
+
+  rw subtype.ext_iff_val,
+  rw fin.coe_val_of_lt,
+  exact hj.2,
+
+  rw fin.coe_val_of_lt,
+  rw fin.coe_val_of_lt,
+  exact hj.1,
+  exact hj.2,
+  refine lt_trans hi (lt_add_one _),
 end
 
 @[derive [decidable_eq]]
