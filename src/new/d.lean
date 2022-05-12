@@ -1083,10 +1083,19 @@ end
 
 end dd_aux
 
-lemma dd_eq_zero (n : ℕ) : dd 𝓕 U n = 0 :=
+lemma dd_eq_zero' (n : ℕ) : dd 𝓕 U n = 0 :=
 begin
   ext f α,
   convert dd_aux.eq_zero 𝓕 U n f α,
+end
+
+lemma dd_eq_zero (n : ℕ) (f α) :
+  d 𝓕 U (n+1) (d 𝓕 U n f) α = 0 :=
+begin
+  have : dd 𝓕 U n f α = 0,
+  { rw dd_eq_zero', 
+    simp },
+  convert this,
 end
 
 end

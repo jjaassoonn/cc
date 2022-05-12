@@ -67,50 +67,96 @@ a0, a1, ..., ai, ..., aj, ...., a(n+2)
 ignore α i = a0, a1, ...., a(i-1), a(i+1), .... aj,   a(j+1) ...., a(n+2)
 ignore α (ignore α i) j = a0, a1, ..., a(i-1), a(i+1), ..., aj, a(j+2), ... a(n+2)
 
+(i < j)
 so ignore₂ α i j = ignore₂ α (j + 1) i
 
+(i = j)
+                                  i-th         n+1st
+ignore α i = a0, a1, ..., a(i-1), a(i+1), ... a(n+2)
+                                              ith          nth
+ignore (ignore α i) i = a0, a1, .... a(i-1), a(i+2), .... a(n+2)
 -/
-lemma ignore₂_symm {n : ℕ} (α : fin (n + 2) → U.ι) 
-  (i : fin (n + 2))
-  (j : fin (n + 1))
-  (h : i.1 ≤ j.1) :
-  ignore₂ α ⟨j.1 + 1, nat.succ_lt_succ_iff.mpr j.2⟩ ⟨i.1, lt_of_le_of_lt h j.2⟩ = ignore₂ α i j :=
-begin
-  admit
-end
 
+-- this is almost certainly correct, as I wrote a python script to test
 lemma ignore₂_symm' {n : ℕ} (α : fin (n + 2) → U.ι)
   {i : ℕ} (hi : i ∈ finset.range n.succ)
-  {j : ℕ} (hj : j ∈ finset.Ico i n.succ) :
+  {j : ℕ} (hj : j ∈ finset.Ico i n.succ) : -- i ≤ j
   ignore₂ α ⟨j + 1, begin
     rw finset.mem_Ico at hj,
     rw nat.succ_lt_succ_iff,
     exact hj.2
   end⟩ ⟨i, finset.mem_range.mp hi⟩ = ignore₂ α ⟨i, lt_trans (finset.mem_range.mp hi) (lt_add_one _)⟩ ⟨j, (finset.mem_Ico.mp hj).2⟩ :=
 begin
+  /-
+  if i = 0 then 
+    rhs = ignore₂ α 0 j m = ignore (ignore α 0) j m 
+      = ignore α 0 m = α (m - 1) if m < j
+      = ignore α 0 (m-1) = α (m - 1) if j ≤ m
+  
+  if i = j,
+    rhs = ignore₂ α i i m
+    lhs = ignore₂ α (i+1) i m
+    
+  
+  if i < j
+
+  if 0 ≤ m ≤ i-1 < i < j,
+  then rhs = ignore₂ α i j m = ignore (ignore α i) j m = ignore α i m = α m
+       lhs = ignore₂ α (j + 1) i m = ignore (ignore α (j + 1)) i m = ignore α (j + 1) m = α m
+
+  if i-1 < m < j, i.e. i ≤ m < j
+  then rhs = ignore₂ α i j m = ignore (ignore α i) j m = ignore α i m = α (m - 1)
+       lhs = ignore₂ α (j + 1) i m = ignore α (j + 1) (m - 1) = α (m - 1)
+
+  if j = m, i < j, i.e. i ≤ j-1
+  then rhs = ignore₂ α i j j = ignore (ignore α i) j j = ignore α i (j-1) = α (j-2)
+    lhs = ignore₂ α (j + 1) i j = ignore α (j + 1) (j - 1) = α (j - 2)
+
+  if j + 1 = m,
+  then rhs = ignore₂ α i j (j+1) = ignore₂ α i j = α (j - 1)
+    lhs = ignore₂ α (j+1) i (j+1) = ignore₂ α (j+1) j = α (j-1)
+
+  if j + 1 < m, then j < m - 1 then j - 1 ≤ m-1
+  then rhs = ignore₂ α i j m = ignore α i (m-1) = α (m-2)
+    lhs = ignore₂ α (j+1) i m = ignore α (j + 1) (m-1) = α (m-2)
+  -/
   rw finset.mem_Ico at hj,
   rw finset.mem_range at hi,
-  
-  convert ignore₂_symm α i j _,
-  rw fin.coe_val_of_lt,
-  exact hj.2,
+  ext1 m,
+  change ignore _ _ _ = ignore _ _ _,
+  by_cases ineq1 : m.1 < i,
+  { have ineq2' : m.1 < j := lt_of_lt_of_le ineq1 hj.1,
+    have ineq2 : m.1 < j + 1 := lt_trans ineq2' (lt_add_one _),
+    rw ignore.apply_lt,
+    swap, exact ineq1,
+    rw ignore.apply_lt,
+    swap, exact ineq2,
+    rw ignore.apply_lt,
+    swap, exact ineq2',
+    rw ignore.apply_lt,
+    exact ineq1 },
+  { rw not_lt at ineq1,
+    rw ignore.apply_not_lt,
+    swap, rwa not_lt,
+    sorry,
+     },
+  -- sorry,
+end
 
-  rw fin.coe_val_of_lt,
-  refine lt_trans hi (lt_add_one _),
 
-  rw subtype.ext_iff_val,
-  rw fin.coe_val_of_lt,
-  refine lt_trans hi (lt_add_one _),
-
-  rw subtype.ext_iff_val,
-  rw fin.coe_val_of_lt,
-  exact hj.2,
-
-  rw fin.coe_val_of_lt,
-  rw fin.coe_val_of_lt,
-  exact hj.1,
-  exact hj.2,
-  refine lt_trans hi (lt_add_one _),
+lemma ignore₂.apply_lt_min {n : ℕ} (α : fin (n + 2) → U.ι)
+  (i : fin (n + 2)) (j : fin (n + 1))
+  (h : i.1 ≤ j.1)
+  (k : fin n)
+  (hj : k.1 < i.1) :
+  ignore₂ α i j k = α ⟨k.1, by linarith [k.2]⟩ :=
+begin
+  change ignore _ _ _ = _,
+  rw ignore.apply_lt,
+  rw ignore.apply_lt,
+  assumption,
+  refine lt_of_lt_of_le _ h,
+  assumption,
 end
 
 @[derive [decidable_eq]]
