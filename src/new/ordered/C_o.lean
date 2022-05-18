@@ -1,8 +1,10 @@
-import new.C
+import topology.sheaves.sheaf
+import algebra.category.Group.limits
+import oc
 import data.nat.parity
-import algebra.category.Group.colimits
+import new.unordered.C
+import lemmas.about_opens
 import lemmas.lemmas
-import algebra.big_operators
 
 noncomputable theory
 
@@ -11,145 +13,359 @@ section
 open topological_space Top Top.sheaf
 open category_theory
 open opposite
-open nat
-
-open_locale big_operators
 
 universe u
 variables {X : Top.{u}} (𝓕 : sheaf Ab X) (U : X.oc)
-variable (n : ℕ)
+
+structure vec_o (n : ℕ) : Type u :=
+(to_fun : fin n → U.ι)
+(is_strict_mono : strict_mono to_fun)
+
+instance (n : ℕ) : has_coe_to_fun (vec_o U n) (λ _, fin n → U.ι) :=
+{ coe := λ α, α.to_fun }
+
+instance (n : ℕ) : has_coe (vec_o U n) (fin n → U.ι) :=
+{ coe := λ α, α.to_fun }
+
+def C_o.pre (n : ℕ) : Type u :=
+Π (α : vec_o U n), 𝓕.1.obj (op $ face α)
 
 section
 
-variables {n 𝓕 U}
-
-/--
-`α = (i₀,⋯,i_{n+1})` then if `k` is even, 
-we write `f (i_0, ..., i_{k-1}, i_{k+1}, ..., i_{n+1}) ∈ 𝓕(U_0 ∩ ... ∩ U_{k-1} ∩ U_{k+1} ∩ ... ∩ U_{n+1})` restricted to `U_0 ∩ ... ∩ U_{n+1}` 
--/
-def d.to_fun.component' (α : fin (n + 1) → U.ι) (k : fin (n + 1)) (f : C.pre 𝓕 U n)  :
-  𝓕.1.obj (op (face α)) :=
-(ite (even k.1) id (has_neg.neg)) $
-  𝓕.1.map (hom_of_le $ face.le_ignore α k).op $ f (ignore α k)
-
-lemma map_congr.vec_eq (f : C.pre 𝓕 U n) {α β : fin n → U.ι} (EQ : α = β) :
+variables {𝓕 U}
+lemma map_congr.vec_o_eq {n} (f : C_o.pre 𝓕 U n) {α β : vec_o U n} (EQ : α = β) :
   f α = 𝓕.1.map (eq_to_hom $ by rw EQ).op (f β) :=
 begin
   subst EQ,
-  rw [eq_to_hom_op, eq_to_hom_map],
-  refl,
+  rw [eq_to_hom_op, eq_to_hom_map, eq_to_hom_refl, id_apply],
 end
-
-def d.to_fun.component (k : fin (n + 1)) :
-  C.pre 𝓕 U n → C.pre 𝓕 U (n + 1) :=
-λ f α, d.to_fun.component' α k f
-
-def d.to_fun (f : C.pre 𝓕 U n) (α : fin (n + 1) → U.ι) : 𝓕.1.obj (op (face α)) :=
-∑ (k : fin (n + 1)), d.to_fun.component k f α
 
 end
 
--- instance {n : ℕ} : add_comm_group (C.pre 𝓕 U n) := by apply_instance
-def d : (C 𝓕 U n) ⟶ (C 𝓕 U (n+1)) := 
-{ to_fun := λ f α, d.to_fun f α,
-  map_zero' := begin
-    ext1 α,
-    simp only [C_pre.zero_apply],
+namespace C_o_pre
+
+variable (n : ℕ)
+variables {𝓕 U}
+
+instance : has_add (C_o.pre 𝓕 U n) :=
+{ add := λ f g α, f α + g α }
+
+lemma add_assoc (f g h : C_o.pre 𝓕 U n) :
+  f + g + h = f + (g + h) :=
+begin
+  ext α,
+  simp [pi.add_apply, add_assoc],
+end
+
+lemma add_comm (f g : C_o.pre 𝓕 U n) :
+  f + g = g + f :=
+funext $ λ _, by simp [add_comm]
+
+instance : has_zero (C_o.pre 𝓕 U n) :=
+{ zero := λ α, 0 }
+
+lemma zero_add (f : C_o.pre 𝓕 U n) :
+  0 + f = f :=
+funext $ λ α, by simp
+
+lemma add_zero (f : C_o.pre 𝓕 U n) :
+  f + 0 = f :=
+funext $ λ _, by simp
+
+instance (α : Type*) [Π (O : opens X), has_scalar α (𝓕.1.obj (op O))] : 
+  has_scalar α (C_o.pre 𝓕 U n) :=
+{ smul := λ m f β, m • (f β) }
+
+lemma nsmul_zero (f : C_o.pre 𝓕 U n):
+  0 • f = 0 :=
+funext $ λ _, by simp
+
+lemma zsmul_zero (f : C_o.pre 𝓕 U n) :
+  (0 : ℤ) • f = 0 :=
+funext $ λ _, by simp
+
+lemma nsmul_succ (m : ℕ) (f : C_o.pre 𝓕 U n)  :
+  m.succ • f = f + m • f :=
+funext $ λ α, by simp [add_nsmul, nat.succ_eq_add_one, _root_.add_comm]
+
+lemma zsmul_succ (m : ℕ) (f : C_o.pre 𝓕 U n)  :
+  int.of_nat (m.succ) • f = f + int.of_nat m • f :=
+funext $ λ α, by simp [add_smul, _root_.add_comm]
+
+instance : has_neg (C_o.pre 𝓕 U n) :=
+{ neg := λ f α, - f α }
+
+lemma add_left_neg (f : C_o.pre 𝓕 U n) :
+  (-f) + f = 0 :=
+funext $ λ _, by simp
+
+instance : has_sub (C_o.pre 𝓕 U n) :=
+{ sub := λ f g α, f α - g α }
+
+lemma sub_eq_add_neg (f g : C_o.pre 𝓕 U n) :
+  f - g = f + (- g) :=
+funext $ λ α, 
+calc  (f - g) α 
+    = f α - g α : rfl
+... = f α + (- g α) : by abel
+
+end C_o_pre
+
+instance (n : ℕ) : add_comm_group (C_o.pre 𝓕 U n) :=
+{ add := (+),
+  add_assoc := C_o_pre.add_assoc n,
+  zero := 0,
+  zero_add := C_o_pre.zero_add n,
+  add_zero := C_o_pre.add_zero n,
+  nsmul := (•),
+  nsmul_zero' := C_o_pre.nsmul_zero n,
+  nsmul_succ' := C_o_pre.nsmul_succ n,
+  neg := has_neg.neg,
+  sub := has_sub.sub,
+  sub_eq_add_neg := C_o_pre.sub_eq_add_neg n,
+  zsmul := (•),
+  zsmul_zero' := C_o_pre.zsmul_zero n,
+  zsmul_succ' := C_o_pre.zsmul_succ n,
+  zsmul_neg' := λ m f, funext $ λ α, by simp [add_smul],
+  add_left_neg := C_o_pre.add_left_neg n,
+  add_comm := C_o_pre.add_comm n }
+
+def C_o (n : ℕ) : Ab := AddCommGroup.of (C_o.pre 𝓕 U n)
+
+section ignore_o
+
+variable (n : ℕ)
+variables {U 𝓕 n}
+
+def ignore_o (α : vec_o U (n + 1)) (k : fin (n + 1)) : vec_o U n :=
+{ to_fun := ignore α.to_fun k,
+  is_strict_mono := λ i j h, begin
+    by_cases ineq1 : j.1 < k.1,
+    { rw ignore.apply_lt,
+      work_on_goal 2
+      { transitivity j.1,
+        exact h,
+        exact ineq1, },
+      rw ignore.apply_lt,
+      work_on_goal 2
+      { assumption, },
+      apply α.2,
+      exact h },
+    -- rw not_lt at ineq1,
+    
+    { rw ignore.apply_not_lt α.1 _ ineq1,
+      rw not_lt at ineq1,
+      rw ignore.apply_ite,
+      split_ifs with ineq2,
+      { apply α.2,
+        change i.1 < j.1.pred,
+        sorry },
+      { apply α.2,
+        change i.1.pred < j.1.pred,
+        sorry }, },
+  end }
+
+def ignore_o₂ (α : vec_o U (n + 2)) (i : fin (n + 2)) (j : fin (n + 1)) :
+  vec_o U n :=
+ignore_o (ignore_o α i) j
+
+lemma ignore_o₂_symm' {n : ℕ} (α : vec_o U (n+2))
+  {i : ℕ} (hi : i ∈ finset.range n.succ)
+  {j : ℕ} (hj : j ∈ finset.Ico i n.succ) : -- i ≤ j
+  ignore_o₂ α ⟨j + 1, begin
+    rw finset.mem_Ico at hj,
+    rw nat.succ_lt_succ_iff,
+    exact hj.2
+  end⟩ ⟨i, finset.mem_range.mp hi⟩ = ignore_o₂ α ⟨i, lt_trans (finset.mem_range.mp hi) (lt_add_one _)⟩ ⟨j, (finset.mem_Ico.mp hj).2⟩ :=
+begin
+  sorry
+end
+
+lemma ignore_o.apply_lt (α : vec_o U (n + 1)) (k : fin (n + 1)) (i : fin n)
+  (ineq : i.1 < k.1) :
+  ignore_o α k i = α ⟨i.1, lt_trans i.2 (lt_add_one _)⟩ :=
+begin
+  change ignore α.to_fun k i = α.1 _,
+  rw ignore.apply_lt,
+  exact ineq
+end
+
+lemma ignore_o.apply_not_lt (α : vec_o U (n + 1)) (k : fin (n + 1)) (i : fin n)
+  (ineq : ¬ i.1 < k.1) :
+  ignore_o α k i = α ⟨i.1.pred, begin
+    rw nat.lt_succ_iff,
+    refine le_of_lt _,
+    exact lt_of_le_of_lt (nat.pred_le _) i.2,
+  end⟩ :=
+begin
+  change ignore α.to_fun k i = α.1 _,
+  rw ignore.apply_not_lt,
+  exact ineq,
+end
+  
+
+def face_o (α : vec_o U n) : opens X :=
+infi (λ (k : fin n), U.cover $ α k)
+
+
+lemma face.le_ignore_o (α : vec_o U (n + 1)) (k : fin (n + 1)) :
+  face_o α ≤ face_o (ignore_o α k) := λ p hp,
+begin
+  rw opens.mem_coe at hp ⊢,
+  erw opens.fintype_infi at hp ⊢,
+  rintros ⟨i, hi⟩,
+  by_cases ineq : i < k.1,
+  { specialize hp ⟨i, _⟩,
+    { refine lt_trans hi _,
+      exact lt_add_one n, },
+    rw ignore_o.apply_lt,
+    swap, exact ineq,
+    exact hp, },
+  { specialize hp ⟨i.pred, _⟩,
+    { rw nat.lt_succ_iff,
+      by_cases i = 0,
+      { subst h,
+        exact nat.zero_le _, },
+      refine le_of_lt _,
+      refine lt_trans _ hi,
+      exact nat.pred_lt h, },
+    rw ignore_o.apply_not_lt,
+    convert hp,
+    exact ineq, }
+end
+
+lemma face.le_ignore_o₂ (α : vec_o U (n + 2)) (i : fin (n + 2)) (j : fin (n + 1)) :
+  face_o α ≤ face_o (ignore_o₂ α i j) :=
+le_trans (face.le_ignore_o _ i) (face.le_ignore_o _ _)
+
+end ignore_o
+
+section d_o
+
+open nat
+open_locale big_operators
+
+variable (n : ℕ)
+variables {𝓕 U n}
+
+def d_o.to_fun.component' (α : vec_o U (n + 1)) (k : fin (n + 1)) (f : C_o.pre 𝓕 U n)  :
+  𝓕.1.obj (op (face α)) :=
+(ite (even k.1) id (has_neg.neg)) $
+  𝓕.1.map (hom_of_le $ face.le_ignore α k).op $ f (ignore_o α k)
+
+
+def d_o.to_fun.component (k : fin (n + 1)) :
+  C_o.pre 𝓕 U n → C_o.pre 𝓕 U (n + 1) :=
+λ f α, d_o.to_fun.component' α k f
+
+def d_o.to_fun (f : C_o.pre 𝓕 U n) (α : vec_o U (n + 1)) : 𝓕.1.obj (op (face α)) :=
+∑ (k : fin (n + 1)), d_o.to_fun.component k f α
+
+variables (n 𝓕 U)
+def d_o : C_o 𝓕 U n ⟶ C_o 𝓕 U (n + 1) :=
+{ to_fun := d_o.to_fun,
+  map_zero' := funext $ λ α, begin
+    simp only [pi.zero_apply],
     change ∑ _, _ = _,
     rw finset.sum_eq_zero,
-    intros i _,
-    change (ite _ id _) _ = _,
-    split_ifs,
-    { rw [id, C_pre.zero_apply, map_zero], },
-    { rw [C_pre.zero_apply, map_zero, neg_zero], },
+    intros i hi,
+    change (ite _ id has_neg.neg) _ = _,
+    split_ifs with e,
+    { rw [id, pi.zero_apply, map_zero], },
+    { rw [pi.zero_apply, map_zero, neg_zero], },
   end,
-  map_add' := λ f g, begin
-    ext1 α,
-    dsimp only,
+  map_add' := λ f g, funext $ λ α, begin
+    rw pi.add_apply,
     change ∑ _, _ = ∑ _, _ + ∑ _, _,
     rw ← finset.sum_add_distrib,
     rw finset.sum_congr rfl,
     intros i _,
     change (ite _ id _) _ = (ite _ id _) _ + (ite _ id _) _,
-    split_ifs,
-    { rw [id, id, id, C_pre.add_apply, map_add], },
-    { rw [C_pre.add_apply, map_add, neg_add], },
+    split_ifs with e,
+    { rw [id, id, id, pi.add_apply, map_add], },
+    { rw [pi.add_apply, map_add, neg_add], },
   end }
 
-abbreviation dd : C 𝓕 U n ⟶ C 𝓕 U (n + 2) := d 𝓕 U n ≫ d 𝓕 U (n + 1)
+abbreviation dd_o : C_o 𝓕 U n ⟶ C_o 𝓕 U (n + 2) :=
+d_o _ _ _ ≫ d_o _ _ _
 
-namespace dd_aux
+namespace dd_o_aux
 
-lemma d_def (f : C 𝓕 U n) (α : fin (n + 1) → U.ι) :
-  d 𝓕 U n f α =
+lemma d_o_def (f : C_o 𝓕 U n) (α : vec_o U (n + 1)) :
+  d_o 𝓕 U n f α =
   ∑ (i : fin (n+1)), 
     (ite (even i.1) id has_neg.neg)
-      𝓕.1.map (hom_of_le $ face.le_ignore α i).op (f (ignore α i)) :=
+      𝓕.1.map (hom_of_le $ face.le_ignore_o α i).op (f (ignore_o α i)) :=
 begin
-  rw [d],
+  rw [d_o],
   simp only [add_monoid_hom.coe_mk, fin.val_eq_coe],
   change ∑ _, _ = _,
   rw finset.sum_congr rfl,
   intros i _,
   change (ite _ id _) _ = _,
   split_ifs,
-  { rw [id, id], },
-  { simp, },
+  { rw [id, id],
+    refl, },
+  { simpa, },
 end
 
-lemma eq1 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
-  d 𝓕 U (n + 1) (d 𝓕 U n f) α := rfl
+lemma eq1 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
+  d_o 𝓕 U (n + 1) (d_o 𝓕 U n f) α := rfl
 
-lemma eq2 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq2 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
-      (𝓕.1.map (hom_of_le (face.le_ignore α i)).op (d 𝓕 U n f (ignore α i))) :=
+      (𝓕.1.map (hom_of_le (face.le_ignore_o α i)).op (d_o 𝓕 U n f (ignore_o α i))) :=
 begin
-  rw [eq1, d_def, finset.sum_congr rfl],
+  rw [eq1, d_o_def, finset.sum_congr rfl],
   intros i _,
   split_ifs,
   { simp },
   { simp },
 end
 
-lemma eq3 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq3 (f : C_o 𝓕 U n) (α : vec_o U (n+2))  :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
       (𝓕.1.map (hom_of_le (face.le_ignore α i)).op
         (∑ (j : fin (n + 1)), 
           (ite (even j.1) id has_neg.neg)
-            (𝓕.1.map (hom_of_le (face.le_ignore (ignore α i) j)).op (f (ignore (ignore α i) j))))) :=
+            (𝓕.1.map (hom_of_le (face.le_ignore (ignore_o α i) j)).op (f (ignore_o (ignore_o α i) j))))) :=
 begin
   rw [eq2, finset.sum_congr rfl],
   intros i _,
-  rw [d_def],
+  rw [d_o_def],
   split_ifs,
   { simp only [id.def],
     rw [add_monoid_hom.map_sum, add_monoid_hom.map_sum, finset.sum_congr rfl],
     intros j _,
     split_ifs,
-    { rw [id, id], },
-    { simp only [pi.neg_apply, add_monoid_hom.neg_apply], }, },
+    { rw [id, id],
+      refl, },
+    { simp only [pi.neg_apply, add_monoid_hom.neg_apply],
+      refl, }, },
   { congr' 2,
     rw [finset.sum_congr rfl],
     intros j _,
     split_ifs,
-    { rw [id, id], },
-    { simp } },
+    { rw [id, id],
+      refl, },
+    { simp only [pi.neg_apply, add_monoid_hom.neg_apply, neg_inj],
+      refl, } },
 end
 
-lemma eq4 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq4 (f : C_o 𝓕 U n) (α : vec_o U (n+2))  :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
       (∑ (j : fin (n + 1)),
-        𝓕.1.map (hom_of_le (face.le_ignore α i)).op
+        𝓕.1.map (hom_of_le (face.le_ignore_o α i)).op
           ((ite (even j.1) id has_neg.neg)
-            𝓕.1.map (hom_of_le (face.le_ignore (ignore α i) j)).op 
-              (f (ignore (ignore α i) j)))) :=
+            𝓕.1.map (hom_of_le (face.le_ignore_o (ignore_o α i) j)).op 
+              (f (ignore_o (ignore_o α i) j)))) :=
 begin
   rw [eq3, finset.sum_congr rfl],
   intros i _,
@@ -157,24 +373,26 @@ begin
   { rw [add_monoid_hom.map_sum, id, id, finset.sum_congr rfl],
     intros j _,
     split_ifs,
-    { rw [id, id], },
-    { simp }, },
+    { rw [id, id],
+      refl, },
+    { simpa }, },
   { rw [add_monoid_hom.map_sum, finset.neg_sum, finset.neg_sum, finset.sum_congr rfl],
     intros j _,
     split_ifs,
-    { rw [id, id], },
-    { simp }, },
+    { rw [id, id],
+      refl, },
+    { simpa }, },
 end
 
-lemma eq5 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq5 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
       (∑ (j : fin (n + 1)),
         (ite (even j.1) id has_neg.neg)
-        (𝓕.1.map (hom_of_le (face.le_ignore α i)).op
-          (𝓕.1.map (hom_of_le (face.le_ignore (ignore α i) j)).op
-            (f (ignore (ignore α i) j))))) :=
+        (𝓕.1.map (hom_of_le (face.le_ignore_o α i)).op
+          (𝓕.1.map (hom_of_le (face.le_ignore_o (ignore_o α i) j)).op
+            (f (ignore_o (ignore_o α i) j))))) :=
 begin
   rw [eq4, finset.sum_congr rfl],
   intros i _,
@@ -191,14 +409,14 @@ begin
     { simp, }, },
 end  
 
-lemma eq6₀ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq6₀ (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
       (∑ (j : fin (n + 1)),
         (ite (even j.1) id has_neg.neg)
         (𝓕.1.map ((hom_of_le (face.le_ignore (ignore α i) j)).op ≫ (hom_of_le (face.le_ignore α i)).op)
-            (f (ignore (ignore α i) j)))) :=
+            (f (ignore_o (ignore_o α i) j)))) :=
 begin
   rw [eq5, finset.sum_congr rfl],
   intros i _,
@@ -206,23 +424,27 @@ begin
   { rw [id, id, finset.sum_congr rfl],
     intros j _,
     split_ifs,
-    { rw [id, id, 𝓕.1.map_comp, comp_apply], },
-    { rw [𝓕.1.map_comp, comp_apply] }, },
+    { rw [id, id, 𝓕.1.map_comp, comp_apply],
+      refl, },
+    { rw [𝓕.1.map_comp, comp_apply],
+      refl, }, },
   { rw [finset.neg_sum, finset.neg_sum, finset.sum_congr rfl],
     intros j _,
     split_ifs,
-    { rw [id, id, 𝓕.1.map_comp, comp_apply] },
-    { rw [neg_neg, neg_neg, 𝓕.1.map_comp, comp_apply] }, }
+    { rw [id, id, 𝓕.1.map_comp, comp_apply],
+      refl, },
+    { rw [neg_neg, neg_neg, 𝓕.1.map_comp, comp_apply],
+      refl, }, }
 end
 
-lemma eq6₁ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq6₁ (f : C_o 𝓕 U n) (α : vec_o U (n+2))  :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
       (∑ (j : fin (n + 1)),
         (ite (even j.1) id has_neg.neg)
         (𝓕.1.map (hom_of_le (face.le_ignore α i) ≫ hom_of_le (face.le_ignore (ignore α i) j)).op)
-            (f (ignore (ignore α i) j))) :=
+            (f (ignore_o (ignore_o α i) j))) :=
 begin
   rw [eq6₀, finset.sum_congr rfl],
   intros i _,
@@ -241,14 +463,14 @@ begin
       simp }, }
 end
 
-lemma eq6₂ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq6₂ (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)),
     (ite (even i.1) id has_neg.neg)
       (∑ (j : fin (n + 1)),
         (ite (even j.1) id has_neg.neg)
-        (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j))) :=
+        (𝓕.1.map (hom_of_le (face.le_ignore_o₂ α i j)).op)
+            (f (ignore_o₂ α i j))) :=
 begin
   rw [eq6₁, finset.sum_congr rfl],
   intros i _,
@@ -265,13 +487,13 @@ begin
     { congr }, },
 end
 
-lemma eq7 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq7 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)), ∑ (j : fin (n + 1)),
     (ite (even i.1) id has_neg.neg)
       (ite (even j.1) id has_neg.neg)
-        (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j)) :=
+        (𝓕.1.map (hom_of_le (face.le_ignore_o₂ α i j)).op)
+            (f (ignore_o₂ α i j)) :=
 begin
   rw [eq6₂, finset.sum_congr rfl],
   intros i _,
@@ -288,12 +510,12 @@ begin
     { rw [pi.neg_apply, neg_neg, add_monoid_hom.neg_apply, neg_neg], }, },
 end
 
-lemma eq8 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq8 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)), ∑ (j : fin (n + 1)),
     (ite (even (i.1 + j.1)) id has_neg.neg)
         (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j)) :=
+            (f (ignore_o₂ α i j)) :=
 begin
   rw [eq7, finset.sum_congr rfl],
   intros i _,
@@ -310,15 +532,18 @@ begin
     rw nat.odd_iff_not_even at this,
     apply this,
     exact h, },
-  { rw [id], },
+  { rw [id],
+    refl, },
   { rw ← nat.odd_iff_not_even at h1,
     have := odd.add_even h1 h,
     rw nat.odd_iff_not_even at this,
     exfalso,
     apply this,
     assumption, },
-  { rw [pi.neg_apply, id], },
-  { rw [pi.neg_apply, neg_neg, id], },
+  { rw [pi.neg_apply, id],
+    refl, },
+  { rw [pi.neg_apply, neg_neg, id],
+    refl, },
   { rw ← nat.odd_iff_not_even at *,
     have := odd.add_odd h1 h,
     rw nat.even_iff_not_odd at this, 
@@ -327,17 +552,17 @@ begin
     assumption },
 end
 
-lemma eq9 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq9 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   ∑ (i : fin (n + 2)), 
     ((∑ (j : fin (n + 1)) in finset.univ.filter (λ (j : fin (n + 1)), i.1 ≤ j.1),
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j))) +
+            (f (ignore_o₂ α i j))) +
     (∑ (j : fin (n + 1)) in finset.univ.filter (λ (j : fin (n + 1)), j.1 < i.1),
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j)))) :=
+            (f (ignore_o₂ α i j)))) :=
 begin
   rw [eq8, finset.sum_congr rfl],
   intros i _,
@@ -352,22 +577,22 @@ begin
   rw [this, finset.sum_add_sum_compl],
 end
 
-lemma eq11 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq11 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ (j : fin (n + 1)) in finset.univ.filter (λ (j : fin (n + 1)), i.1 ≤ j.1),
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j))) +
+            (f (ignore_o₂ α i j))) +
   (∑ (i : fin (n + 2)), ∑ (j : fin (n + 1)) in finset.univ.filter (λ (j : fin (n + 1)), j.1 < i.1),
     (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j))) :=
+            (f (ignore_o₂ α i j))) :=
 begin
   rw [eq9, finset.sum_add_distrib],
 end
 
-lemma eq13 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq13 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -375,11 +600,11 @@ lemma eq13 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ (i : fin (n + 2)), ∑ (j : fin (n + 1)) in finset.univ.filter (λ (j : fin (n + 1)), j.1 < i.1),
     (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i j)).op)
-            (f (ignore₂ α i j))) :=
+            (f (ignore_o₂ α i j))) :=
 begin
   rw [eq11],
   congr' 1,
@@ -402,13 +627,13 @@ begin
     dsimp only,
     split_ifs,
     { rw [id, id],
-      rw map_congr.vec_eq f (_ : ignore₂ α i j = ignore₂ α i ⟨j.1, _⟩),
+      rw map_congr.vec_o_eq f (_ : ignore_o₂ α i j = ignore_o₂ α i ⟨j.1, _⟩),
       rw [← comp_apply, ← 𝓕.1.map_comp, ← op_comp],
       congr,
       congr' 1,
       rw subtype.ext_iff_val, },
     { rw [add_monoid_hom.neg_apply, add_monoid_hom.neg_apply],
-      rw map_congr.vec_eq f (_ : ignore₂ α i j = ignore₂ α i ⟨j.1, _⟩),
+      rw map_congr.vec_o_eq f (_ : ignore_o₂ α i j = ignore_o₂ α i ⟨j.1, _⟩),
       rw [← comp_apply, ← 𝓕.1.map_comp, ← op_comp],
       congr,
       congr' 1,
@@ -427,8 +652,8 @@ begin
     rw subtype.ext_iff_val, },
 end
 
-lemma eq14 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq14 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -436,7 +661,7 @@ lemma eq14 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ (i : fin (n + 2)), ∑ j in (finset.range i.1).attach,
     (ite (even (i.1 + j)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -446,7 +671,7 @@ lemma eq14 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             { linarith [i.2], },
             linarith,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) :=
 begin
   rw [eq13],
   congr' 1,
@@ -470,13 +695,13 @@ begin
     dsimp only,
     split_ifs,
     { rw [id, id],
-      rw map_congr.vec_eq f (_ : ignore₂ α i j = ignore₂ α i ⟨j.1, _⟩),
+      rw map_congr.vec_o_eq f (_ : ignore_o₂ α i j = ignore_o₂ α i ⟨j.1, _⟩),
       rw [← comp_apply, ← 𝓕.1.map_comp, ← op_comp],
       congr,
       congr' 1,
       rw subtype.ext_iff_val, },
     { rw [add_monoid_hom.neg_apply, add_monoid_hom.neg_apply],
-      rw map_congr.vec_eq f (_ : ignore₂ α i j = ignore₂ α i ⟨j.1, _⟩),
+      rw map_congr.vec_o_eq f (_ : ignore_o₂ α i j = ignore_o₂ α i ⟨j.1, _⟩),
       rw [← comp_apply, ← 𝓕.1.map_comp, ← op_comp],
       congr,
       congr' 1,
@@ -497,8 +722,8 @@ begin
     apply finset.mem_univ, },
 end
 
-lemma eq15 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq15 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -506,7 +731,7 @@ lemma eq15 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ j in (finset.range n.succ).attach, ∑ i in (finset.Ico j.1.succ n.succ.succ).attach,
     (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -517,7 +742,7 @@ lemma eq15 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             have hj := j.2,
             rwa finset.mem_range at hj,
           end⟩)).op)
-            (f (ignore₂ α _ _))) :=
+            (f (ignore_o₂ α _ _))) :=
 begin
   rw [eq14],
   congr' 1,
@@ -581,8 +806,8 @@ begin
 end
 
 
-lemma eq16 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq16 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -590,7 +815,7 @@ lemma eq16 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, ∑ j in (finset.Ico i.1.succ n.succ.succ).attach,
     (ite (even (j.1 + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨j.1, begin
@@ -601,13 +826,13 @@ lemma eq16 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             have hj := i.2,
             rwa finset.mem_range at hj,
           end⟩)).op)
-            (f (ignore₂ α _ _))) :=
+            (f (ignore_o₂ α _ _))) :=
 begin
   rw [eq15],
 end
 
-lemma eq17 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq17 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -615,7 +840,7 @@ lemma eq17 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even ((j.1 + 1) + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨j.1 + 1, begin
@@ -627,7 +852,7 @@ lemma eq17 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             have hj := i.2,
             rwa finset.mem_range at hj,
           end⟩)).op)
-            (f (ignore₂ α ⟨j.1 + 1, _⟩ ⟨i.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨j.1 + 1, _⟩ ⟨i.1, _⟩))) :=
 begin
   rw [eq16],
   congr' 1,
@@ -662,7 +887,7 @@ begin
     },
   { intros j hj,
     dsimp only,
-    rw map_congr.vec_eq f (_ : ignore₂ α ⟨j.1, _⟩ ⟨i.1, _⟩ = ignore₂ α ⟨j.1.pred + 1, _⟩ ⟨i.1, _⟩),
+    rw map_congr.vec_o_eq f (_ : ignore_o₂ α ⟨j.1, _⟩ ⟨i.1, _⟩ = ignore_o₂ α ⟨j.1.pred + 1, _⟩ ⟨i.1, _⟩),
     by_cases e1 : even (j.1 + i.1),
     { rw [if_pos e1, if_pos, id, id, ← comp_apply, ← 𝓕.1.map_comp], congr,
       rwa [← nat.succ_eq_add_one, nat.succ_pred_eq_of_pos],
@@ -703,8 +928,8 @@ begin
     apply finset.mem_attach, },
 end
 
-lemma eq18 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq18 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -712,7 +937,7 @@ lemma eq18 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even ((j.1 + 1) + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -725,7 +950,7 @@ lemma eq18 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw eq17 𝓕 U n f α,
   apply congr_arg2 (+) rfl _,
@@ -734,18 +959,18 @@ begin
   rw [finset.sum_congr rfl],
   intros j hj,
   generalize_proofs _ h1 h2 h3 h4 h5,
-  rw map_congr.vec_eq f (_ : ignore₂ α ⟨j.1 + 1, h1⟩ ⟨i.1, h2⟩ = ignore₂ α ⟨i.1, h4⟩ ⟨j.1, _⟩),
+  rw map_congr.vec_o_eq f (_ : ignore_o₂ α ⟨j.1 + 1, h1⟩ ⟨i.1, h2⟩ = ignore_o₂ α ⟨i.1, h4⟩ ⟨j.1, _⟩),
   split_ifs,
   { rw [id, id, ← comp_apply, ← 𝓕.1.map_comp],
     congr },
   { rw [add_monoid_hom.neg_apply, add_monoid_hom.neg_apply, ← comp_apply, ← 𝓕.1.map_comp],
     congr },
-  have := ignore₂_symm' α i.2 j.2,
+  have := ignore_o₂_symm' α i.2 j.2,
   convert ← this,
 end
 
-lemma eq19 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq19 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ (i : fin (n + 2)), ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α i ⟨j.1, begin
@@ -753,7 +978,7 @@ lemma eq19 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α i ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α i ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, - ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even (j.1 + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -766,7 +991,7 @@ lemma eq19 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw [eq18],
   congr' 1,
@@ -794,8 +1019,8 @@ begin
     abel, },
 end
 
-lemma eq20₀ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq20₀ (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ i in (finset.range (n+2)).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -806,7 +1031,7 @@ lemma eq20₀ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, - ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even (j.1 + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -819,7 +1044,7 @@ lemma eq20₀ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw [eq19],
   congr' 1,
@@ -831,8 +1056,8 @@ begin
   refl,
 end
 
-lemma eq20₁ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq20₁ (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ i in (finset.range (n+1)).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -844,7 +1069,7 @@ lemma eq20₁ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
   (∑ j in (finset.Ico n.succ n.succ).attach,
     (ite (even (n.succ + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨n.succ, begin
@@ -854,7 +1079,7 @@ lemma eq20₁ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, - ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even (j.1 + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -867,7 +1092,7 @@ lemma eq20₁ (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) :=
 have eq0 : 
   ∑ i in (finset.range (n+2)).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even (i.1 + j.1)) id has_neg.neg)
@@ -879,7 +1104,7 @@ have eq0 :
           rw finset.mem_Ico at hj,
           exact hj.2,
         end⟩)).op)
-          (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩)) =
+          (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩)) =
   ∑ i in (insert n.succ (finset.range (n+1))).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even (i.1 + j.1)) id has_neg.neg)
         (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -896,7 +1121,7 @@ have eq0 :
           rw finset.mem_Ico at hj,
           exact hj.2,
         end⟩)).op)
-          (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩)),
+          (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩)),
 begin
   rw finset.sum_bij',
   work_on_goal 4
@@ -947,8 +1172,8 @@ begin
     apply lt_irrefl _ ha, },
 end
 
-lemma eq21 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq21 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ i in (finset.range (n+1)).attach, ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -960,7 +1185,7 @@ lemma eq21 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
   (∑ i in (finset.range n.succ).attach, - ∑ j in (finset.Ico i.1 n.succ).attach,
     (ite (even (j.1 + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -973,7 +1198,7 @@ lemma eq21 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
   (∑ j in (finset.Ico n.succ n.succ).attach,
     (ite (even (n.succ + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨n.succ, begin
@@ -983,14 +1208,14 @@ lemma eq21 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw [eq20₁],
   abel,
 end
 
-lemma eq22 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq22 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ i in (finset.range (n+1)).attach, 
     ((∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (i.1 + j.1)) id has_neg.neg)
@@ -1003,7 +1228,7 @@ lemma eq22 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))) +
     (- ∑ j in (finset.Ico i.1 n.succ).attach,
       (ite (even (j.1 + i.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨i.1, begin
@@ -1016,7 +1241,7 @@ lemma eq22 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))))) +
+            (f (ignore_o₂ α ⟨i.1, _⟩ ⟨j.1, _⟩))))) +
   (∑ j in (finset.Ico n.succ n.succ).attach,
     (ite (even (n.succ + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨n.succ, begin
@@ -1026,13 +1251,13 @@ lemma eq22 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw [eq21, finset.sum_add_distrib],
 end
 
-lemma eq23 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α =
+lemma eq23 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α =
   (∑ i in (finset.range (n+1)).attach, 0) +
   (∑ j in (finset.Ico n.succ n.succ).attach,
     (ite (even (n.succ + j.1)) id has_neg.neg)
@@ -1043,7 +1268,7 @@ lemma eq23 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw [eq22],
   congr' 1,
@@ -1053,8 +1278,8 @@ begin
   rw add_neg_eq_zero,
 end
 
-lemma eq24 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α = 0 +
+lemma eq24 (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α = 0 +
   (∑ j in (finset.Ico n.succ n.succ).attach,
     (ite (even (n.succ + j.1)) id has_neg.neg)
           (𝓕.1.map (hom_of_le (face.le_ignore₂ α ⟨n.succ, begin
@@ -1064,7 +1289,7 @@ lemma eq24 (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
             rw finset.mem_Ico at hj,
             exact hj.2,
           end⟩)).op)
-            (f (ignore₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
+            (f (ignore_o₂ α ⟨n.succ, _⟩ ⟨j.1, _⟩))) :=
 begin
   rw [eq23],
   congr',
@@ -1072,8 +1297,8 @@ begin
   intros, refl,
 end
 
-lemma eq_zero (f : C 𝓕 U n) (α : fin (n + 2) → U.ι) :
-  dd 𝓕 U n f α = 0 :=
+lemma eq_zero (f : C_o 𝓕 U n) (α : vec_o U (n+2)) :
+  dd_o 𝓕 U n f α = 0 :=
 begin
   rw [eq24, zero_add],
   convert finset.sum_empty,
@@ -1081,21 +1306,9 @@ begin
   rw finset.attach_empty
 end
 
-end dd_aux
 
-lemma dd_eq_zero' (n : ℕ) : dd 𝓕 U n = 0 :=
-begin
-  ext f α,
-  convert dd_aux.eq_zero 𝓕 U n f α,
-end
+end dd_o_aux
 
-lemma dd_eq_zero (n : ℕ) (f α) :
-  d 𝓕 U (n+1) (d 𝓕 U n f) α = 0 :=
-begin
-  have : dd 𝓕 U n f α = 0,
-  { rw dd_eq_zero', 
-    simp },
-  convert this,
-end
+end d_o
 
 end
