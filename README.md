@@ -49,3 +49,15 @@ end
 So we have a differential now, which means we can build cohomology theory.
 
 To use the mathlib version of Abelian group has colimits, we need to lift up one universe.
+
+## FIXME
+
+Currently, I accidentally implemented the ordered chain as
+
+```math
+\begin{CD}
+\mathcal F(X) @>>> \prod_i \mathcal F(U_i) @>>> \prod_{i_0<i_1} \mathcal F(U_i\cap U_j) @>>> \cdots
+\end{CD}
+```
+
+But we should not have included the first term. Similarly for unordered.
