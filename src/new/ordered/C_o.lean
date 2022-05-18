@@ -21,6 +21,28 @@ structure vec_o (n : ℕ) : Type u :=
 (to_fun : fin n → U.ι)
 (is_strict_mono : strict_mono to_fun)
 
+def vec_o.zero : vec_o U 0 :=
+{ to_fun := λ ⟨i, hi⟩, by linarith,
+  is_strict_mono := λ ⟨i, hi⟩ _ _, by linarith }
+
+@[ext] lemma vec_o_ext {n : ℕ} {α β : vec_o U n} (h1 : α.to_fun = β.to_fun) :
+  α = β :=
+begin
+  cases α,
+  cases β,
+  dsimp at *,
+  subst h1,
+end
+
+
+lemma vec_o.zero_uniq (α : vec_o U 0) :
+  α = vec_o.zero _ :=
+begin
+  ext j,
+  rcases j with ⟨j, hj⟩,
+  linarith
+end
+
 instance (n : ℕ) : has_coe_to_fun (vec_o U n) (λ _, fin n → U.ι) :=
 { coe := λ α, α.to_fun }
 
@@ -238,7 +260,56 @@ lemma face.le_ignore_o₂ (α : vec_o U (n + 2)) (i : fin (n + 2)) (j : fin (n +
   face_o α ≤ face_o (ignore_o₂ α i j) :=
 le_trans (face.le_ignore_o _ i) (face.le_ignore_o _ _)
 
+lemma face.vec_o_zero :
+  face (vec_o.zero U) = ⊤ :=
+begin
+  rw eq_top_iff,
+  rintros p -,
+  erw [opens.mem_coe, opens.fintype_infi],
+  rintros ⟨j, hj⟩,
+  linarith,
+end
+
 end ignore_o
+
+
+def C_o.zeroth :
+  C_o 𝓕 U 0 ≅ 𝓕.1.obj (op ⊤) :=
+{ hom :=
+  { to_fun := λ f, 𝓕.1.map (eq_to_hom (face.vec_o_zero).symm).op $ f (vec_o.zero U),
+    map_zero' := begin
+      rw [pi.zero_apply, map_zero],
+    end,
+    map_add' := λ f g, begin
+      rw [pi.add_apply, map_add],
+    end },
+  inv := 
+  { to_fun := λ s α, 𝓕.1.map (hom_of_le $ le_top).op s,
+    map_zero' := begin
+      ext α,
+      rw [map_zero, pi.zero_apply],
+    end,
+    map_add' := λ f g, begin
+      ext α,
+      rw [pi.add_apply, map_add],
+    end },
+  hom_inv_id' := begin
+    ext f α,
+    change (𝓕.1.map _ ≫ 𝓕.1.map _) _ = _,
+    simp only [id_apply],
+    rw map_congr.vec_o_eq f (vec_o.zero_uniq U α),
+    rw ← 𝓕.1.map_comp,
+    congr,
+  end,
+  inv_hom_id' := begin
+    ext f,
+    change (𝓕.1.map _ ≫ 𝓕.1.map _) _ = _,
+    rw [id_apply, ← 𝓕.1.map_comp],
+    have : 𝓕.val.map (𝟙 (op ⊤)) f = f,
+    { rw 𝓕.1.map_id,
+      rw id_apply, },
+    convert this,
+  end }
 
 section d_o
 
@@ -1309,6 +1380,88 @@ end
 
 end dd_o_aux
 
+lemma dd_o_eq_zero' (n : ℕ) : dd_o 𝓕 U n = 0 :=
+begin
+  ext f α,
+  convert dd_o_aux.eq_zero 𝓕 U n f α,
+end
+
+lemma dd_o_eq_zero (n : ℕ) (f α) :
+  d_o 𝓕 U (n+1) (d_o 𝓕 U n f) α = 0 :=
+begin
+  have : dd_o 𝓕 U n f α = 0,
+  { rw dd_o_eq_zero', 
+    simp },
+  exact this,
+end
+
 end d_o
+
+namespace d_o_small
+
+open_locale big_operators
+
+lemma vec_one_ignore_eq (α : vec_o U 1) :
+  ignore_o α 0 = 
+  vec_o.zero U :=
+begin
+  ext j,
+  rcases j with ⟨j, hj⟩,
+  linarith,
+end
+ 
+lemma d_o.zeroth_apply (f : C_o 𝓕 U 0) (α : vec_o U 1) :
+  d_o 𝓕 U _ f α =
+  𝓕.1.map (hom_of_le $ begin
+    rw face.vec_o_zero,
+    exact le_top,
+  end).op (f (vec_o.zero U)) :=
+begin
+  rw dd_o_aux.d_o_def,
+  rw finset.sum_fin_eq_sum_range,
+  rw finset.sum_range_one,
+  rw dif_pos,
+  swap, exact nat.zero_lt_succ _,
+  rw if_pos,
+  swap, exact even_zero,
+  rw [id],
+  erw map_congr.vec_o_eq f (vec_one_ignore_eq U α),
+  rw [← comp_apply, ← 𝓕.1.map_comp],
+  congr' 1,
+end
+
+lemma d_o.one_apply (f : C_o 𝓕 U 1) (α : vec_o U 2) :
+  d_o 𝓕 U 1 f α =
+  𝓕.1.map (hom_of_le (face.le_ignore_o _ _)).op (f (ignore_o α 0)) -
+  𝓕.1.map (hom_of_le (face.le_ignore_o _ _)).op (f (ignore_o α 1)) :=
+begin
+  rw dd_o_aux.d_o_def,
+  rw finset.sum_fin_eq_sum_range,
+  have seteq : finset.range (1 + 1) = {0, 1},
+  { norm_num,
+    ext,
+    split,
+    { intros h,
+      rw finset.mem_range at h,
+      rw [finset.mem_insert, finset.mem_singleton],
+      interval_cases a;
+      cc, },
+    { intros h,
+      rw [finset.mem_insert, finset.mem_singleton] at h,
+      rw finset.mem_range,
+      rcases h with rfl|rfl;
+      linarith, }, },
+  rw [seteq, finset.sum_pair],
+  swap, linarith,
+  rw [dif_pos (nat.zero_lt_succ _), if_pos (even_zero), id, dif_pos (lt_add_one 1), if_neg],
+  swap, 
+    rw ← nat.odd_iff_not_even,
+    exact odd_one,
+  change _ + (- 𝓕.1.map _ _) = _,
+  rw ← sub_eq_add_neg,
+  refl,
+end
+
+end d_o_small
 
 end
