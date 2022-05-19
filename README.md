@@ -52,7 +52,7 @@ To use the mathlib version of Abelian group has colimits, we need to lift up one
 
 ## FIXME
 
-Currently, I accidentally implemented the ordered chain as
+~~Currently, I accidentally implemented the ordered chain as~~
 
 ```math
 \begin{CD}
@@ -60,4 +60,5 @@ Currently, I accidentally implemented the ordered chain as
 \end{CD}
 ```
 
-But we should not have included the first term. Similarly for unordered.
+
+~~But we should not have included the first term. Similarly for unordered.~~

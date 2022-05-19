@@ -45,15 +45,16 @@ begin
 end
 
 def Cech_complex_wrt_cover_unordered : cochain_complex Ab ℕ :=
-{ X := λ n, C 𝓕 U n,
-  d := λ i j, d_from_to 𝓕 U i j,
+{ X := λ n, C 𝓕 U (n + 1),
+  d := λ i j, d_from_to 𝓕 U (i + 1) (j + 1),
   shape' := λ i j h, begin
     ext f α,
     rw d_not_to_succ,
     rw [add_monoid_hom.zero_apply, pi.zero_apply],
     simp only [complex_shape.up_rel] at h,
-    symmetry,
-    exact h,
+    contrapose! h,
+    simp only [add_left_inj] at h,
+    exact h.symm,
   end,
   d_comp_d' := λ i j k h1 h2, begin
     simp only [complex_shape.up_rel] at h1 h2,
@@ -70,7 +71,7 @@ def Cech_complex_wrt_cover_unordered : cochain_complex Ab ℕ :=
 lemma Cech_complex_wrt_cover_unordered.d_to_rel
   (n : ℕ) (m) (h : (complex_shape.up ℕ).prev n = some m) :
   (Cech_complex_wrt_cover_unordered 𝓕 U).d m.1 n =
-  d 𝓕 U m.1 ≫ eq_to_hom begin
+  d 𝓕 U (m.1 + 1) ≫ eq_to_hom begin
     have := m.2,
     simp only [complex_shape.up_rel] at this,
     rw this,
@@ -80,7 +81,8 @@ begin
   change d_from_to 𝓕 U _ _ = _,
   rw [d_from_to, dif_pos],
   refl,
-  exact m.2.symm,
+  have h2 := m.2.symm,
+  rw ← h2,
 end
 
 noncomputable def Cech_Cohomology_Group_wrt_cover_unordered_nth (n : ℕ) : Ab :=
@@ -97,7 +99,7 @@ noncomputable def Cech_complex_wrt_cover_unordered.prev (n : ℕ) :
 match (complex_shape.up ℕ).prev n with
 | none := 0
 | some m := begin
-  refine _ ≫ @C.refine X 𝓕 _ _ m.1 r ≫ _,
+  refine _ ≫ @C.refine X 𝓕 _ _ (m.1 + 1) r ≫ _,
   refine (homological_complex.X_prev_iso _ m.2).hom,
   exact (homological_complex.X_prev_iso (Cech_complex_wrt_cover_unordered 𝓕 U) m.2).inv,
 end
@@ -116,7 +118,7 @@ lemma Cech_Group_wrt_cover_unordered_nth.prev_some (n : ℕ) (m)
   (h : (complex_shape.up ℕ).prev n = some m) :
   Cech_complex_wrt_cover_unordered.prev 𝓕 r n = 
   (homological_complex.X_prev_iso _ m.2).hom ≫ 
-    @C.refine X 𝓕 _ _ m.1 r ≫ 
+    @C.refine X 𝓕 _ _ (m.1 + 1) r ≫ 
     (homological_complex.X_prev_iso (Cech_complex_wrt_cover_unordered 𝓕 U) m.2).inv :=
 begin
   rw Cech_complex_wrt_cover_unordered.prev,
@@ -172,7 +174,8 @@ homology.map _ _
       apply whisker_eq,
       
       rw C.refine_eq_to_hom,
-      exact m.2, },
+      have : _ + 1 = _ := m.2, 
+      rw this, },
   end } 
 { left := C.refine r,
   right := begin
@@ -190,9 +193,9 @@ homology.map _ _
     congr' 1,
     simp only [← category.assoc],
     apply eq_whisker,
-    change C.refine r ≫ d_from_to 𝓕 U n (n + 1) = _,
+    change C.refine r ≫ d_from_to 𝓕 U _ _ = _,
     rw d_to_succ',
-    change _ = d_from_to 𝓕 V n (n + 1) ≫ C.refine r,
+    change _ = d_from_to _ _ _ _ ≫ C.refine r,
     rw d_to_succ',
     rw C.refine_d_eq_d_refine,
   end } 
