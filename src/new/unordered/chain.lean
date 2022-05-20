@@ -4,6 +4,8 @@ import algebra.category.Group.abelian
 import algebra.homology.homology
 import new.unordered.refinement
 
+noncomputable theory
+
 section
 
 open topological_space Top Top.sheaf
@@ -44,7 +46,7 @@ begin
   refl,
 end
 
-def Cech_complex_wrt_cover_unordered : cochain_complex Ab ℕ :=
+def Cech_complex_wrt_cover_unordered : cochain_complex Ab.{u} ℕ :=
 { X := λ n, C 𝓕 U (n + 1),
   d := λ i j, d_from_to 𝓕 U (i + 1) (j + 1),
   shape' := λ i j h, begin
@@ -85,15 +87,16 @@ begin
   rw ← h2,
 end
 
-noncomputable def Cech_Cohomology_Group_wrt_cover_unordered_nth (n : ℕ) : Ab :=
-homological_complex.homology (Cech_complex_wrt_cover_unordered 𝓕 U) n
+def Cech_Cohomology_Group_wrt_cover_unordered_nth (n : ℕ) : Ab.{u} :=
+@homological_complex.homology ℕ Ab _ _ (complex_shape.up ℕ) (abelian.has_zero_object) _ _ _
+  (Cech_complex_wrt_cover_unordered 𝓕 U) n
 
 section
 
 variables {U V} (r : U ⟶ V)
 
 include r
-noncomputable def Cech_complex_wrt_cover_unordered.prev (n : ℕ) :
+def Cech_complex_wrt_cover_unordered.prev (n : ℕ) :
   (Cech_complex_wrt_cover_unordered 𝓕 V).X_prev n ⟶
   (Cech_complex_wrt_cover_unordered 𝓕 U).X_prev n :=
 match (complex_shape.up ℕ).prev n with
@@ -131,7 +134,7 @@ begin
   rw [complex_shape.next_eq_some],
 end
 
-noncomputable def Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement (n : ℕ) :
+def Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement (n : ℕ) :
   Cech_Cohomology_Group_wrt_cover_unordered_nth 𝓕 V n ⟶
   Cech_Cohomology_Group_wrt_cover_unordered_nth 𝓕 U n :=
 homology.map _ _ 
@@ -201,8 +204,8 @@ homology.map _ _
   end } 
 rfl
 
-noncomputable def Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement_functor (n : ℕ) :
-  X.ocᵒᵖ ⥤ Ab :=
+def Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement_functor (n : ℕ) :
+  X.ocᵒᵖ ⥤ Ab.{u} :=
 { obj := λ U, Cech_Cohomology_Group_wrt_cover_unordered_nth 𝓕 U.unop n,
   map := λ U V r, Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement 𝓕 r.unop n,
   map_id' := λ U, begin
@@ -215,7 +218,7 @@ noncomputable def Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement_funct
   map_comp' := sorry }
 
 include 𝓕
-noncomputable def Cech_Cohomology_Group_nth (n : ℕ) : Ab :=
+def Cech_Cohomology_Group_nth (n : ℕ) : Ab :=
 limits.colim.obj $ (Cech_Cohomology_Group_wrt_cover_unordered_nth.refinement_functor 𝓕 r n) ⋙ AddCommGroup.ulift_functor.{u u+1}
 
 end

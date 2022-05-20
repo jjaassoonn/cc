@@ -121,8 +121,8 @@ begin
   rw [d_o_from_to, dif_neg h],
   refl,
 end
--- Need correction
-def Cech_complex_wrt_cover_ordered : cochain_complex Ab ℕ :=
+
+def Cech_complex_wrt_cover_ordered : cochain_complex Ab.{u} ℕ :=
 { X := λ n, C_o 𝓕 U (n + 1),
   d := λ i j, d_o_from_to 𝓕 U _ _,
   shape' := λ i j h, begin
@@ -163,12 +163,13 @@ begin
   exact m.2.symm,
 end
 
-noncomputable def Cech_Cohomology_Group_wrt_cover_ordered_nth (n : ℕ) : Ab :=
-homological_complex.homology (Cech_complex_wrt_cover_ordered 𝓕 U) n
+def Cech_Cohomology_Group_wrt_cover_ordered_nth (n : ℕ) : Ab :=
+@homological_complex.homology ℕ Ab _ _ (complex_shape.up ℕ) (abelian.has_zero_object) _ _ _
+  (Cech_complex_wrt_cover_ordered 𝓕 U) n
 
 section zeroth
 
-noncomputable def ex1 :
+def ex1 :
   Cech_Cohomology_Group_wrt_cover_ordered_nth 𝓕 U 0 ≅
   kernel ((Cech_complex_wrt_cover_ordered 𝓕 U).d 0 1) :=
 begin
