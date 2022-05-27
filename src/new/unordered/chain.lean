@@ -97,14 +97,18 @@ variables {U V} (r : U ⟶ V)
 
 include r
 def Cech_complex_wrt_cover_unordered.prev (n : ℕ) :
-  (Cech_complex_wrt_cover_unordered 𝓕 V).X_prev n ⟶
-  (Cech_complex_wrt_cover_unordered 𝓕 U).X_prev n :=
+  @homological_complex.X_prev _ _ _ _ (complex_shape.up ℕ) 
+    (Cech_complex_wrt_cover_unordered 𝓕 V)
+    (abelian.has_zero_object) n ⟶
+  @homological_complex.X_prev _ _ _ _ (complex_shape.up ℕ)
+    (Cech_complex_wrt_cover_unordered 𝓕 U)
+    (abelian.has_zero_object) n :=
 match (complex_shape.up ℕ).prev n with
 | none := 0
 | some m := begin
   refine _ ≫ @C.refine X 𝓕 _ _ (m.1 + 1) r ≫ _,
-  refine (homological_complex.X_prev_iso _ m.2).hom,
-  exact (homological_complex.X_prev_iso (Cech_complex_wrt_cover_unordered 𝓕 U) m.2).inv,
+  refine (@@homological_complex.X_prev_iso _ _ _ (abelian.has_zero_object) m.2).hom,
+  exact (@@homological_complex.X_prev_iso _ _ (Cech_complex_wrt_cover_unordered 𝓕 U) (abelian.has_zero_object) m.2).inv,
 end
 end
 
@@ -120,9 +124,9 @@ end
 lemma Cech_Group_wrt_cover_unordered_nth.prev_some (n : ℕ) (m)
   (h : (complex_shape.up ℕ).prev n = some m) :
   Cech_complex_wrt_cover_unordered.prev 𝓕 r n = 
-  (homological_complex.X_prev_iso _ m.2).hom ≫ 
+  (@@homological_complex.X_prev_iso _ _ _ (abelian.has_zero_object) m.2).hom ≫ 
     @C.refine X 𝓕 _ _ (m.1 + 1) r ≫ 
-    (homological_complex.X_prev_iso (Cech_complex_wrt_cover_unordered 𝓕 U) m.2).inv :=
+    (@@homological_complex.X_prev_iso _ _ (Cech_complex_wrt_cover_unordered 𝓕 U) (abelian.has_zero_object) m.2).inv :=
 begin
   rw Cech_complex_wrt_cover_unordered.prev,
   rw h,
@@ -181,11 +185,13 @@ homology.map _ _
       rw this, },
   end } 
 { left := C.refine r,
-  right := begin
-    refine ((Cech_complex_wrt_cover_unordered 𝓕 V).X_next_iso (rfl : n + 1 = n + 1)).hom ≫ 
+  right := (@@homological_complex.X_next_iso _ _ (Cech_complex_wrt_cover_unordered 𝓕 V) 
+      (abelian.has_zero_object) 
+      (rfl : n + 1 = n + 1)).hom ≫ 
       C.refine r ≫ 
-      ((Cech_complex_wrt_cover_unordered 𝓕 U).X_next_iso (rfl : n + 1 = n + 1)).inv
-  end,
+      (@@homological_complex.X_next_iso _ _ (Cech_complex_wrt_cover_unordered 𝓕 U) 
+        (abelian.has_zero_object) 
+        (rfl : n + 1 = n + 1)).inv,
   w' := begin
     simp only [category_theory.functor.id_map, arrow.mk_hom],
     ext f α,
