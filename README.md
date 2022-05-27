@@ -2,9 +2,9 @@
 
 ## Open coverings
 
-Let $`X`$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be well ordered.
+Let $X$ be a topological space, an open covering for $X$ is a collection of open sets whose union is the whole $X$. In the case of Čech cohomology, we require the underlying set to be well ordered.
 
-Let $X$ be a topological space, an open covering for $`X`$ is a collection of open sets whose union is the whole $`X`$. In the case of Čech cohomology, we require the underlying set to be linearly ordered.
+Let $X$ be a topological space, an open covering for $X$ is a collection of open sets whose union is the whole $X$. In the case of Čech cohomology, we require the underlying set to be linearly ordered.
 In Lean we express this as
 
 ```lean
@@ -19,7 +19,7 @@ attribute [instance] oc.lo oc.wo
 attribute [simp] oc.is_cover
 ```
 
-Then for two open covers $`\mathfrak A`$ and $`\mathfrak B`$ indexed by $`I`$ and $`J`$, respectively, we say $`\mathfrak A`$ refines $`\mathfrak B`$, if there is a strictly monotonic function $`f : I \to J`$ such that $`\mathfrak A_i \subseteq \mathfrak B_{f(j)}`$ for all $`i ∈ I`$. In Lean, this is
+Then for two open covers $\mathfrak A$ and $\mathfrak B$ indexed by $I$ and $J$, respectively, we say $\mathfrak A$ refines $\mathfrak B$, if there is a strictly monotonic function $f : I \to J$ such that $\mathfrak A_i \subseteq \mathfrak B_{f(j)}$ for all $i ∈ I$. In Lean, this is
 
 ``` lean
 @[ext] structure refines (𝔄 𝔅 : X.oc) : Type (u+1) :=
@@ -28,7 +28,7 @@ Then for two open covers $`\mathfrak A`$ and $`\mathfrak B`$ indexed by $`I`$ an
 (is_refinement : ∀ i : 𝔄.ι, 𝔄.cover i ≤ 𝔅.cover (func i))
 ```
 
-We temporarily fix the indexing set $`ι`$, then an $`n`$-simplex is simply a finite set of $`ι`$ with $`n+1`$ elements. In Lean, this is
+We temporarily fix the indexing set $ι$, then an $n$-simplex is simply a finite set of $ι$ with $n+1$ elements. In Lean, this is
 
 ```lean
 @[ext] structure simplex (n : ℕ) extends finset ι :=

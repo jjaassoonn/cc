@@ -12,6 +12,8 @@ open category_theory
 open opposite
 open AddCommGroup (hiding has_zero_object)
 
+open_locale big_operators
+
 universe u
 variables {X : Top.{u}} (𝓕 : sheaf Ab X) (U : X.oc)
 
@@ -33,7 +35,24 @@ def chain_unordered_to_ordered :
   Cech_complex_wrt_cover_unordered 𝓕 U ⟶
   Cech_complex_wrt_cover_ordered   𝓕 U :=
 { f := λ n, unordered_to_ordered (n+1),
-  comm' := sorry }
+  comm' := λ i j (h : _ + 1 = _), begin
+    subst h,
+    ext f α,
+    -- change unordered_to_ordered.to_fun (i + 1) ≫ _ = _,
+    rw [comp_apply, comp_apply, unordered_to_ordered, add_monoid_hom.coe_mk, 
+      unordered_to_ordered, add_monoid_hom.coe_mk, unordered_to_ordered.to_fun,
+      unordered_to_ordered.to_fun],
+    simp only,
+    erw d_o_to_succ,
+    erw d_to_succ,
+    rw dd_o_aux.d_o_def,
+    rw dd_aux.d_def,
+    rw finset.sum_congr rfl,
+    rintros ⟨k, hk⟩ -,
+    split_ifs,
+    { rw [id], refl, },
+    { refl, },
+  end }
 
 def vec2vec_o_of_inj.to_fun {n} {α : fin n → U.ι} (h : function.injective α) : fin n → U.ι :=
 let β := finset.order_iso_of_fin (finset.image α finset.univ) 
@@ -45,6 +64,16 @@ let β := finset.order_iso_of_fin (finset.image α finset.univ)
     assumption
   end) in
 (λ x, x.1 : finset.image α finset.univ → U.ι) ∘ β.to_fun
+
+lemma vec2vec_o_of_inj.to_fun_mem {n} {α : fin n → U.ι} (h : function.injective α) (i : fin n) :
+  vec2vec_o_of_inj.to_fun h i ∈ finset.image α finset.univ := finset.mem_image.mpr $
+begin
+  dunfold vec2vec_o_of_inj.to_fun,
+  simp only [finset.mem_univ, subtype.val_eq_coe, order_iso.to_fun_eq_coe, 
+    function.comp_app, finset.coe_order_iso_of_fin_apply, exists_true_left],
+  generalize_proofs card_eq,
+  sorry
+end
 
 lemma vec2vec_o_of_inj.is_strict_mono {n} {α : fin n → U.ι} (h : function.injective α) :
   strict_mono (vec2vec_o_of_inj.to_fun h) := λ i j ineq,
@@ -60,10 +89,25 @@ def vec2vec_o_of_inj {n} {α : fin n → U.ι} (h : function.injective α) : vec
 { to_fun := vec2vec_o_of_inj.to_fun h,
   is_strict_mono := vec2vec_o_of_inj.is_strict_mono h }
 
+lemma vec2vec_o_of_inj.mem_image {n} {α : fin n → U.ι} (h : function.injective α) (i : fin n) :
+  vec2vec_o_of_inj h i ∈ finset.image α finset.univ :=
+vec2vec_o_of_inj.to_fun_mem h i
+
+
 lemma face.vec2vec_o_eq {n} {α : fin n → U.ι} (h : function.injective α) :
   face α = 
-  face_o (vec2vec_o_of_inj h) :=
-sorry
+  face_o (vec2vec_o_of_inj h) := 
+opens.ext $ set.ext $ λ p,
+begin
+  erw [opens.mem_coe, opens.mem_coe, opens.fintype_infi, opens.mem_coe, opens.fintype_infi],
+  split;
+  intros hp i,
+  { rcases finset.mem_image.mp (vec2vec_o_of_inj.mem_image h i) with ⟨j, _, hj⟩,
+    specialize hp j,
+    rw hj at hp,
+    exact hp, },
+  { sorry },
+end
 
 def ordered_to_unordered.to_fun (n : ℕ) :
   C_o 𝓕 U n → C 𝓕 U n := λ f α, 
